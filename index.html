@@ -371,13 +371,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r6 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r7 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r6 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r7 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -437,7 +437,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r6</div>
+      <div class="rail-version">v1 r7</div>
     </div>
   </aside>
 
@@ -521,15 +521,6 @@ table.opps tr:hover td{ background:#fafbfd }
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-head">
-          <div class="card-title">Net Pipeline Waterfall</div>
-          <div class="card-sub" id="dash-waterfall-sub">Sales New Logo − Replacements − Closed Lost = Net</div>
-        </div>
-        <div class="card-body">
-          <div class="chart-canvas-wrap" style="height:280px"><canvas id="ch-waterfall"></canvas></div>
-        </div>
-      </div>
 
       <div class="card">
         <div class="card-head">
@@ -856,13 +847,16 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r6";
+const APP_VERSION   = "v1 r7";
 
-// Legacy SP attribution values from imported historical data — these are not
-// user accounts (people no longer in role) but still attributed to old engagements.
-// Active users with role='user' contribute their full_name to SP_LIST automatically.
-const SP_LEGACY = ["Madee","Reo","Rodel","Jie"];
-let SP_LIST = [...SP_LEGACY];   // recomputed in computeSpList() once allUsers is loaded
+// Former Success Pilots — full names of people who used to be SPs but no
+// longer hold the role. Some still have historical data attributed to them
+// (Jie/Madee/Reo/Rodel) and one (Ryan Navaro) is here for completeness even
+// if they have no rows attributed yet. They render with "(former)" in the
+// dropdowns. Active users contribute their full_name to SP_LIST automatically.
+const FORMER_SPS = ["Jie Diroy", "Madee Amparo", "Reo Matias", "Rodel Murillo", "Ryan Navaro"];
+let SP_LIST = [];                 // recomputed in computeSpList() once allUsers is loaded
+let SP_FORMER_SET = new Set();    // recomputed: which entries in SP_LIST are former SPs
 
 /* ========================================================
    STATE
@@ -900,6 +894,22 @@ function clientCell(row){
   return `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer"
             style="color:var(--accent-600);text-decoration:underline;text-underline-offset:2px"
             title="Open in HubSpot">${name}</a>`;
+}
+
+// Render the JRID cell. Canonicalises "JR - 1234" / "jr-1234" to "JR-1234"
+// and hyperlinks JR-NNNN to the Cloudstaff Jobs admin (numeric portion only).
+// Non-JR values (UB-..., "No JR", etc.) display as-is, no link.
+function jridCell(raw){
+  const v = (raw || '').trim();
+  if (!v) return '';
+  const m = v.match(/^JR[-\s]*(\d+)$/i);
+  if (!m) return escapeHtml(v);
+  const num  = m[1];
+  const text = `JR-${num}`;
+  return `<a href="https://jobs-admin.cloudstaff.com/job-requests/${num}"
+            target="_blank" rel="noopener noreferrer"
+            style="color:var(--accent-600);text-decoration:underline;text-underline-offset:2px"
+            title="Open in Cloudstaff Jobs admin">${text}</a>`;
 }
 
 function toast(msg, kind='info'){
@@ -1003,14 +1013,24 @@ async function loadAllOpps(){
   return out;
 }
 
-// Build SP_LIST from active users (role='user') + legacy attributions still
-// present in opportunities but not matching any user.
+// Build SP_LIST from active users (role='user') + curated former SPs +
+// any orphan SP values found in opportunities. SP_FORMER_SET marks who's no
+// longer current so the UI can render them with a "(former)" suffix.
 function computeSpList(){
   const fromUsers = allUsers.filter(u => u.role === 'user' && u.sp_name).map(u => u.sp_name);
   const fromOpps  = [...new Set(allOpps.map(o => (o.sp||'').trim()).filter(Boolean))];
   const userSet   = new Set(fromUsers);
-  const orphans   = fromOpps.filter(sp => !userSet.has(sp));
-  SP_LIST = [...new Set([...fromUsers, ...orphans])].sort((a,b) => a.localeCompare(b));
+  const formerSet = new Set([...FORMER_SPS, ...fromOpps.filter(sp => !userSet.has(sp))]);
+  // active users are NEVER former
+  for (const u of fromUsers) formerSet.delete(u);
+  SP_FORMER_SET = formerSet;
+  SP_LIST = [...new Set([...fromUsers, ...formerSet])].sort((a,b) => a.localeCompare(b));
+}
+
+// Render an <option> for an SP value, marking former SPs visually.
+function spOption(sp, selected){
+  const label = SP_FORMER_SET.has(sp) ? `${sp} · former` : sp;
+  return `<option value="${escapeHtml(sp)}"${selected===sp?' selected':''}>${escapeHtml(label)}</option>`;
 }
 
 // All authenticated users can VIEW every opportunity. Edit / delete
@@ -1066,14 +1086,14 @@ function showPage(name){
    FILTERS — DASHBOARD
    ======================================================== */
 function populateFilters(){
-  // SP dropdowns — every user sees every option.
+  // SP dropdowns — every user sees every option, with "· former" badge on
+  // people no longer in the SP role.
   const dashSp = $('dash-sp');
   const oppSp  = $('opp-sp');
   dashSp.disabled = false; oppSp.disabled = false;
-  const spOptions = `<option value="">All Success Pilots</option>` +
-    SP_LIST.map(sp => `<option value="${sp}">${sp}</option>`).join('');
-  dashSp.innerHTML = spOptions;
-  oppSp.innerHTML  = spOptions;
+  const spOpts = `<option value="">All Success Pilots</option>` + SP_LIST.map(sp => spOption(sp)).join('');
+  dashSp.innerHTML = spOpts;
+  oppSp.innerHTML  = spOpts;
   // Default the Opportunities-page SP filter to the logged-in user's own SP
   // attribution (so they see their stuff first; can change to any).
   if (currentUser.sp_name) oppSp.value = currentUser.sp_name;
@@ -1090,9 +1110,9 @@ function populateFilters(){
   const fSp = $('f-sp');
   fSp.innerHTML = '<option value="">— Select —</option>';
   if (currentUser.role === 'admin') {
-    SP_LIST.forEach(sp => fSp.innerHTML += `<option value="${sp}">${sp}</option>`);
+    SP_LIST.forEach(sp => fSp.innerHTML += spOption(sp));
   } else {
-    fSp.innerHTML += `<option value="${currentUser.sp_name}">${currentUser.sp_name}</option>`;
+    fSp.innerHTML += spOption(currentUser.sp_name);
   }
 }
 
@@ -1180,11 +1200,10 @@ function renderDashboard(){
     </tr>
   `).join('') || '<tr><td colspan="9" class="empty-state">No matching opportunities.</td></tr>';
 
-  // Waterfall chart
-  drawWaterfall(rows);
 }
 
-function drawWaterfall(rows){
+// (waterfall chart removed in v1 r7 — did not present well)
+function _drawWaterfall_DEPRECATED(rows){
   const id = 'ch-waterfall';
   charts[id]?.destroy?.();
   if (!$(id)) return;
@@ -1341,7 +1360,7 @@ function renderOppsPage(){
       <td><b>${escapeHtml(r.sp||'')}</b></td>
       <td>${clientCell(r)}</td>
       <td title="${escapeHtml(r.describe_opportunity||'')}">${escapeHtml(r.describe_opportunity||'')}</td>
-      <td class="mono">${escapeHtml(r.jrid_uberticket||'')}</td>
+      <td class="mono">${jridCell(r.jrid_uberticket)}</td>
       <td>${escapeHtml(r.bdm_am_name||'')}</td>
       <td>${typeTag(r.type_of_engagement)}</td>
       <td>${statusTag(r.current_status)}</td>
@@ -1465,13 +1484,21 @@ function renderUsersPage(){
   $('users-count').textContent = `${allUsers.length} user${allUsers.length===1?'':'s'}`;
   $('users-new').style.display = isAdmin ? '' : 'none';
   $('users-tbody').innerHTML = allUsers.map(u => {
-    const isSelf = u.id === currentUser.id;
-    const actions = isAdmin ? `
+    const isSelf  = u.id === currentUser.id;
+    const canEdit = isAdmin || isSelf;
+    const canReset= isAdmin || isSelf;
+    const canDel  = isAdmin && !isSelf;
+    let actions;
+    if (!isAdmin && !isSelf) {
+      actions = `<span class="muted mono" style="font-size:11px">read-only</span>`;
+    } else {
+      actions = `
         <div class="row-actions">
-          <button class="btn-icon" data-act="edit" title="Edit user"><svg class="i" viewBox="0 0 24 24"><use href="#i-edit"/></svg></button>
-          <button class="btn-icon" data-act="reset" title="Reset password"><svg class="i" viewBox="0 0 24 24"><use href="#i-cloud"/></svg></button>
-          <button class="btn-icon danger" data-act="delete" title="${isSelf?'Cannot delete yourself':'Delete user'}" ${isSelf?'disabled style="opacity:.4;cursor:not-allowed"':''}><svg class="i" viewBox="0 0 24 24"><use href="#i-trash"/></svg></button>
-        </div>` : `<span class="muted mono" style="font-size:11px">read-only</span>`;
+          <button class="btn-icon" data-act="edit"  title="${canEdit  ? (isSelf && !isAdmin ? 'Edit your details' : 'Edit user') : 'Read-only'}"  ${canEdit  ? '' : 'disabled style="opacity:.35;cursor:not-allowed"'}><svg class="i" viewBox="0 0 24 24"><use href="#i-edit"/></svg></button>
+          <button class="btn-icon" data-act="reset" title="${canReset ? (isSelf && !isAdmin ? 'Change your password' : 'Reset password') : 'Read-only'}" ${canReset ? '' : 'disabled style="opacity:.35;cursor:not-allowed"'}><svg class="i" viewBox="0 0 24 24"><use href="#i-cloud"/></svg></button>
+          <button class="btn-icon danger" data-act="delete" title="${isSelf?'Cannot delete yourself':(canDel?'Delete user':'Read-only')}" ${canDel ? '' : 'disabled style="opacity:.35;cursor:not-allowed"'}><svg class="i" viewBox="0 0 24 24"><use href="#i-trash"/></svg></button>
+        </div>`;
+    }
     return `
     <tr data-id="${u.id}">
       <td class="mono">${escapeHtml(u.email)}${isSelf ? ' <span class="tag tag-open" style="margin-left:4px">you</span>' : ''}</td>
@@ -1489,13 +1516,21 @@ let editingUserId = null;
 
 function openUserModal(user){
   editingUserId = user ? user.id : null;
-  $('user-modal-title').textContent = user ? 'Edit User' : 'New User';
+  const isAdmin = currentUser.role === 'admin';
+  const isSelf  = user && user.id === currentUser.id;
+  // Title reflects context
+  const title = !user ? 'New User'
+              : (isSelf && !isAdmin ? 'Edit Your Details' : 'Edit User');
+  $('user-modal-title').textContent = title;
   $('user-form-error').style.display = 'none';
   $('u-id').value     = user?.id   || '';
   $('u-email').value  = user?.email || '';
-  $('u-email').disabled = !!user; // email is the unique key — don't allow change
+  // Email is editable for: creates (admin), self-edit (any role), admin-edit-other (yes)
+  $('u-email').disabled = false;
   $('u-name').value   = user?.full_name || '';
   $('u-role').value   = user?.role || 'user';
+  // Non-admins editing themselves cannot change role
+  $('u-role').disabled = !!user && !isAdmin;
 
   // SP attribution = full_name when user role, none when admin (auto-derived)
   syncSpAttributionField();
@@ -1547,7 +1582,12 @@ async function submitUserForm(e){
   try {
     const email   = $('u-email').value.trim().toLowerCase();
     const name    = $('u-name').value.trim();
-    const role    = $('u-role').value;
+    const isAdmin = currentUser.role === 'admin';
+    const isSelfEdit = editingUserId === currentUser.id;
+    // Non-admin self-edit: role is locked, can't be raised. Otherwise read role from form.
+    const role = (!isAdmin && isSelfEdit) ? currentUser.role : $('u-role').value;
+    // Non-admins cannot create users — defensive check
+    if (!editingUserId && !isAdmin) throw new Error('Only admins can add new users.');
     // SP attribution is auto-set: users get their full name, admins get none.
     const sp_name = (role === 'user' && name) ? name : null;
 
@@ -1556,10 +1596,16 @@ async function submitUserForm(e){
 
     if (editingUserId) {
       // Update — protect: admin cannot demote themselves to 'user'
-      if (editingUserId === currentUser.id && role !== 'admin') {
+      if (isSelfEdit && currentUser.role === 'admin' && role !== 'admin') {
         throw new Error('You cannot remove your own admin role.');
       }
-      const payload = { full_name: name, role, sp_name };
+      // Email uniqueness check if email changed
+      const target = allUsers.find(u => u.id === editingUserId);
+      if (target && target.email !== email) {
+        const dupe = await sb("GET", `sp_users?email=eq.${encodeURIComponent(email)}&id=not.eq.${editingUserId}&select=id`);
+        if (dupe && dupe.length) throw new Error('That email address is already in use.');
+      }
+      const payload = { full_name: name, email, role, sp_name };
       const updated = await sb("PATCH", `sp_users?id=eq.${editingUserId}`, payload, "return=representation");
       if (updated && updated[0] && updated[0].id === currentUser.id) {
         currentUser = { ...currentUser, ...updated[0] };
@@ -1761,13 +1807,22 @@ function bindEvents(){
   $('users-tbody').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-act]');
     if (!btn || btn.disabled) return;
-    if (currentUser.role !== 'admin') { toast('Read-only — only admins can manage users.', 'error'); return; }
     const id = btn.closest('tr').dataset.id;
-    const u = allUsers.find(x => x.id === id);
+    const u  = allUsers.find(x => x.id === id);
     if (!u) return;
-    if (btn.dataset.act === 'edit')   openUserModal(u);
-    if (btn.dataset.act === 'reset')  openResetPasswordModal(u);
-    if (btn.dataset.act === 'delete') deleteUser(u);
+    const isAdmin = currentUser.role === 'admin';
+    const isSelf  = u.id === currentUser.id;
+    const act     = btn.dataset.act;
+    // Permission gates
+    if (act === 'delete' && (!isAdmin || isSelf)) {
+      toast(isSelf ? 'You cannot delete yourself.' : 'Only admins can delete users.', 'error'); return;
+    }
+    if ((act === 'edit' || act === 'reset') && !isAdmin && !isSelf) {
+      toast('You can only edit your own user record.', 'error'); return;
+    }
+    if (act === 'edit')   openUserModal(u);
+    if (act === 'reset')  openResetPasswordModal(u);
+    if (act === 'delete') deleteUser(u);
   });
 
   // User modal
