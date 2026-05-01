@@ -371,13 +371,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r5 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r6 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r5 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r6 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -437,7 +437,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r5</div>
+      <div class="rail-version">v1 r6</div>
     </div>
   </aside>
 
@@ -518,6 +518,16 @@ table.opps tr:hover td{ background:#fafbfd }
         <div class="chart-card">
           <div class="chart-title">Engagement Status by Client Count</div>
           <div class="chart-canvas-wrap"><canvas id="ch-status"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Net Pipeline Waterfall</div>
+          <div class="card-sub" id="dash-waterfall-sub">Sales New Logo − Replacements − Closed Lost = Net</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-canvas-wrap" style="height:280px"><canvas id="ch-waterfall"></canvas></div>
         </div>
       </div>
 
@@ -846,7 +856,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r5";
+const APP_VERSION   = "v1 r6";
 
 // Legacy SP attribution values from imported historical data — these are not
 // user accounts (people no longer in role) but still attributed to old engagements.
@@ -880,6 +890,17 @@ function fmtDate(d){
   return dt.toLocaleDateString('en-AU', {day:'2-digit',month:'short',year:'numeric'});
 }
 function num(v){ return (v===null||v===undefined||v==='') ? 0 : Number(v) }
+
+// Render a client-name cell. If hubspot_link is present, hyperlink it
+// (target=_blank). Otherwise plain text. Always HTML-escaped.
+function clientCell(row){
+  const name = escapeHtml(row.client_name || '');
+  const link = (row.hubspot_link || '').trim();
+  if (!link || !/^https?:\/\//i.test(link)) return name;
+  return `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer"
+            style="color:var(--accent-600);text-decoration:underline;text-underline-offset:2px"
+            title="Open in HubSpot">${name}</a>`;
+}
 
 function toast(msg, kind='info'){
   const w = $('toast-wrap');
@@ -944,7 +965,9 @@ function tryRestoreSession(){
    ======================================================== */
 async function loadData(){
   // Supabase REST has a hard 1000-row default cap; we page through using Range headers.
-  const usersP = currentUser.role === 'admin' ? sb("GET", "sp_users?select=*&order=created_at.asc") : Promise.resolve([currentUser]);
+  // Everyone (admin and user) loads the full user roster — Users page is now
+  // read-only for non-admins but still shows the full list.
+  const usersP = sb("GET", "sp_users?select=id,email,full_name,role,sp_name,created_at&order=created_at.asc");
   const [opps, users] = await Promise.all([loadAllOpps(), usersP]);
   allOpps  = opps  || [];
   allUsers = users || [];
@@ -990,10 +1013,14 @@ function computeSpList(){
   SP_LIST = [...new Set([...fromUsers, ...orphans])].sort((a,b) => a.localeCompare(b));
 }
 
+// All authenticated users can VIEW every opportunity. Edit / delete
+// permissions are gated separately at the action site (admins can edit
+// all rows; non-admins can only edit rows where sp == their full name).
 function visibleOpps(){
-  if (currentUser.role === 'admin') return allOpps;
-  if (!currentUser.sp_name) return [];
-  return allOpps.filter(o => (o.sp || '').trim() === currentUser.sp_name);
+  return allOpps;
+}
+function canEditOpp(o){
+  return currentUser.role === 'admin' || (o.sp || '').trim() === currentUser.sp_name;
 }
 
 async function createOpp(payload){
@@ -1039,32 +1066,27 @@ function showPage(name){
    FILTERS — DASHBOARD
    ======================================================== */
 function populateFilters(){
-  // SP dropdown — admins see "All" + every SP; users locked to themselves
+  // SP dropdowns — every user sees every option.
   const dashSp = $('dash-sp');
   const oppSp  = $('opp-sp');
-  dashSp.innerHTML = ''; oppSp.innerHTML = '';
-  if (currentUser.role === 'admin') {
-    dashSp.innerHTML += `<option value="">All Success Pilots</option>`;
-    oppSp.innerHTML  += `<option value="">All Success Pilots</option>`;
-    SP_LIST.forEach(sp => {
-      dashSp.innerHTML += `<option value="${sp}">${sp}</option>`;
-      oppSp.innerHTML  += `<option value="${sp}">${sp}</option>`;
-    });
-  } else {
-    const sp = currentUser.sp_name || '';
-    dashSp.innerHTML = `<option value="${sp}">${sp}</option>`;
-    oppSp.innerHTML  = `<option value="${sp}">${sp}</option>`;
-    dashSp.disabled = true; oppSp.disabled = true;
-  }
+  dashSp.disabled = false; oppSp.disabled = false;
+  const spOptions = `<option value="">All Success Pilots</option>` +
+    SP_LIST.map(sp => `<option value="${sp}">${sp}</option>`).join('');
+  dashSp.innerHTML = spOptions;
+  oppSp.innerHTML  = spOptions;
+  // Default the Opportunities-page SP filter to the logged-in user's own SP
+  // attribution (so they see their stuff first; can change to any).
+  if (currentUser.sp_name) oppSp.value = currentUser.sp_name;
 
-  // Year dropdown — derive from all visible opps
+  // Year dropdown — derive from all opps
   const years = [...new Set(visibleOpps().map(o => (o.engagement_start_date||'').slice(0,4)).filter(Boolean))].sort().reverse();
   const dashYear = $('dash-year');
   const oppYear  = $('opp-year');
   dashYear.innerHTML = `<option value="">All years</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
   oppYear.innerHTML  = `<option value="">All years</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
 
-  // SP form dropdown
+  // SP form dropdown — admin can pick any; non-admin locked to themselves
+  // (because they can only create/edit rows under their own attribution).
   const fSp = $('f-sp');
   fSp.innerHTML = '<option value="">— Select —</option>';
   if (currentUser.role === 'admin') {
@@ -1147,7 +1169,7 @@ function renderDashboard(){
   $('dash-opps-tbody').innerHTML = rows.slice(0, 200).map(r => `
     <tr>
       <td><b>${escapeHtml(r.sp||'')}</b></td>
-      <td>${escapeHtml(r.client_name||'')}</td>
+      <td>${clientCell(r)}</td>
       <td>${escapeHtml(r.describe_opportunity||'')}</td>
       <td>${escapeHtml(r.bdm_am_name||'')}</td>
       <td>${typeTag(r.type_of_engagement)}</td>
@@ -1157,6 +1179,63 @@ function renderDashboard(){
       <td class="mono">${r.number_of_replacement_seats ?? ''}</td>
     </tr>
   `).join('') || '<tr><td colspan="9" class="empty-state">No matching opportunities.</td></tr>';
+
+  // Waterfall chart
+  drawWaterfall(rows);
+}
+
+function drawWaterfall(rows){
+  const id = 'ch-waterfall';
+  charts[id]?.destroy?.();
+  if (!$(id)) return;
+  // Counts
+  const newLogo = rows.filter(r => r.type_of_engagement === 'Sales New Logo').length;
+  const repls   = rows.filter(r => r.type_of_engagement === 'Replacement').length;
+  const losses  = rows.filter(r => r.current_status === 'Closed / Lost').length;
+  const net     = Math.max(0, newLogo - repls - losses);
+
+  // Floating-bar segments [from, to]
+  let running = newLogo;
+  const seg1 = [0, newLogo];                       // up to total
+  const seg2_to = running; running = Math.max(0, running - repls);
+  const seg2 = [running, seg2_to];                 // drop by repls
+  const seg3_to = running; running = Math.max(0, running - losses);
+  const seg3 = [running, seg3_to];                 // drop by losses
+  const seg4 = [0, net];                           // final standalone
+
+  const ctx = $(id).getContext('2d');
+  charts[id] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Sales New Logo', `Replacements (−${repls})`, `Losses (−${losses})`, 'Net'],
+      datasets: [{
+        data: [seg1, seg2, seg3, seg4],
+        backgroundColor: ['#3c6ef5', '#f59e0b', '#ef4444', '#10b981'],
+        borderRadius: 4,
+        barPercentage: 0.7,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (c) => {
+              const v = c.parsed; // {x, y} where y is the [from,to] for bar
+              const idx = c.dataIndex;
+              const labels = [`Total: ${newLogo}`, `Subtract ${repls}`, `Subtract ${losses}`, `Net new: ${net}`];
+              return labels[idx];
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { font: { family: 'Inter', size: 11 } } },
+        y: { beginAtZero: true, ticks: { font: { family: 'JetBrains Mono', size: 11 } } }
+      }
+    }
+  });
 }
 
 function drawPie(canvasId, labels, data, colors){
@@ -1252,10 +1331,15 @@ function renderOppsPage(){
   );
 
   $('opp-count').textContent = `${rows.length.toLocaleString()} rows`;
-  $('opp-tbody').innerHTML = rows.slice(0,500).map(r => `
+  $('opp-tbody').innerHTML = rows.slice(0,500).map(r => {
+    const editable = canEditOpp(r);
+    const editTitle   = editable ? 'Edit'   : 'Read-only — only the owning SP or an admin can edit';
+    const deleteTitle = editable ? 'Delete' : 'Read-only — only the owning SP or an admin can delete';
+    const disabledAttr = editable ? '' : 'disabled style="opacity:.35;cursor:not-allowed"';
+    return `
     <tr data-id="${r.id}">
       <td><b>${escapeHtml(r.sp||'')}</b></td>
-      <td>${escapeHtml(r.client_name||'')}</td>
+      <td>${clientCell(r)}</td>
       <td title="${escapeHtml(r.describe_opportunity||'')}">${escapeHtml(r.describe_opportunity||'')}</td>
       <td class="mono">${escapeHtml(r.jrid_uberticket||'')}</td>
       <td>${escapeHtml(r.bdm_am_name||'')}</td>
@@ -1266,12 +1350,12 @@ function renderOppsPage(){
       <td class="mono">${r.number_of_replacement_seats ?? ''}</td>
       <td>
         <div class="row-actions">
-          <button class="btn-icon" data-act="edit"   title="Edit"  ><svg class="i" viewBox="0 0 24 24"><use href="#i-edit"/></svg></button>
-          <button class="btn-icon danger" data-act="delete" title="Delete"><svg class="i" viewBox="0 0 24 24"><use href="#i-trash"/></svg></button>
+          <button class="btn-icon" data-act="edit"   title="${editTitle}"   ${disabledAttr}><svg class="i" viewBox="0 0 24 24"><use href="#i-edit"/></svg></button>
+          <button class="btn-icon danger" data-act="delete" title="${deleteTitle}" ${disabledAttr}><svg class="i" viewBox="0 0 24 24"><use href="#i-trash"/></svg></button>
         </div>
       </td>
-    </tr>
-  `).join('') || '<tr><td colspan="11" class="empty-state">No matching opportunities.</td></tr>';
+    </tr>`;
+  }).join('') || '<tr><td colspan="11" class="empty-state">No matching opportunities.</td></tr>';
 }
 
 function statusTag(s){
@@ -1377,9 +1461,17 @@ async function reloadUsers(){
 }
 
 function renderUsersPage(){
+  const isAdmin = currentUser.role === 'admin';
   $('users-count').textContent = `${allUsers.length} user${allUsers.length===1?'':'s'}`;
+  $('users-new').style.display = isAdmin ? '' : 'none';
   $('users-tbody').innerHTML = allUsers.map(u => {
     const isSelf = u.id === currentUser.id;
+    const actions = isAdmin ? `
+        <div class="row-actions">
+          <button class="btn-icon" data-act="edit" title="Edit user"><svg class="i" viewBox="0 0 24 24"><use href="#i-edit"/></svg></button>
+          <button class="btn-icon" data-act="reset" title="Reset password"><svg class="i" viewBox="0 0 24 24"><use href="#i-cloud"/></svg></button>
+          <button class="btn-icon danger" data-act="delete" title="${isSelf?'Cannot delete yourself':'Delete user'}" ${isSelf?'disabled style="opacity:.4;cursor:not-allowed"':''}><svg class="i" viewBox="0 0 24 24"><use href="#i-trash"/></svg></button>
+        </div>` : `<span class="muted mono" style="font-size:11px">read-only</span>`;
     return `
     <tr data-id="${u.id}">
       <td class="mono">${escapeHtml(u.email)}${isSelf ? ' <span class="tag tag-open" style="margin-left:4px">you</span>' : ''}</td>
@@ -1387,13 +1479,7 @@ function renderUsersPage(){
       <td>${u.role === 'admin' ? '<span class="tag tag-cons">admin</span>' : '<span class="tag tag-open">user</span>'}</td>
       <td>${escapeHtml(u.sp_name || '—')}</td>
       <td class="mono">${fmtDate(u.created_at)}</td>
-      <td>
-        <div class="row-actions">
-          <button class="btn-icon" data-act="edit" title="Edit user"><svg class="i" viewBox="0 0 24 24"><use href="#i-edit"/></svg></button>
-          <button class="btn-icon" data-act="reset" title="Reset password"><svg class="i" viewBox="0 0 24 24"><use href="#i-cloud"/></svg></button>
-          <button class="btn-icon danger" data-act="delete" title="${isSelf?'Cannot delete yourself':'Delete user'}" ${isSelf?'disabled style="opacity:.4;cursor:not-allowed"':''}><svg class="i" viewBox="0 0 24 24"><use href="#i-trash"/></svg></button>
-        </div>
-      </td>
+      <td>${actions}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="6" class="empty-state">No users.</td></tr>';
 }
@@ -1582,9 +1668,11 @@ async function bootApp(){
   $('rail-uname').textContent  = currentUser.full_name;
   $('rail-urole').textContent  = currentUser.role + (currentUser.sp_name ? ' · ' + currentUser.sp_name : '');
 
-  if (currentUser.role === 'admin') {
-    $('rail-admin-label').style.display = 'block';
-    $('rail-users-item').style.display = 'flex';
+  // Users page is visible to everyone (read-only for non-admins).
+  $('rail-admin-label').style.display = 'block';
+  $('rail-users-item').style.display = 'flex';
+  if (currentUser.role !== 'admin') {
+    $('rail-admin-label').textContent = 'Reference';
   }
 
   $('login-screen').style.display = 'none';
@@ -1665,11 +1753,15 @@ function bindEvents(){
   $('opp-form').addEventListener('submit', submitForm);
   $('opp-form-cancel').addEventListener('click', () => { editingId = null; showPage('opportunities') });
 
-  // Users page — new + row actions
-  $('users-new').addEventListener('click', () => openUserModal(null));
+  // Users page — new + row actions (admin only)
+  $('users-new').addEventListener('click', () => {
+    if (currentUser.role !== 'admin') { toast('Only admins can add users.', 'error'); return; }
+    openUserModal(null);
+  });
   $('users-tbody').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-act]');
     if (!btn || btn.disabled) return;
+    if (currentUser.role !== 'admin') { toast('Read-only — only admins can manage users.', 'error'); return; }
     const id = btn.closest('tr').dataset.id;
     const u = allUsers.find(x => x.id === id);
     if (!u) return;
