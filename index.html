@@ -48,42 +48,66 @@
 html,body{font-family:var(--font-sans);color:var(--ink-800);background:var(--bg-page);font-size:14px}
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
 
-/* ============= LOGIN ============= */
+/* ============= LOGIN — RRP Quick Quote pattern ============= */
 .login-screen{
   position:fixed; inset:0;
-  background:linear-gradient(180deg, #1e2538 0%, #131826 100%);
+  background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   display:flex; align-items:center; justify-content:center; padding:20px; z-index:100;
 }
 .login-card{
-  background:#fff; border-radius:var(--r-xl); padding:32px;
-  width:100%; max-width:380px;
-  box-shadow:0 24px 60px -20px rgba(0,0,0,.5);
+  background:#fff; border-radius:16px; padding:2.5rem;
+  width:90%; max-width:400px;
+  box-shadow:0 25px 50px rgba(0,0,0,.3);
 }
-.login-logo{ display:flex; justify-content:center; margin-bottom:18px }
-.login-logo img{ height:32px }
-.login-title{ font-size:20px; font-weight:700; text-align:center; color:var(--ink-900); margin-bottom:6px }
-.login-subtitle{ font-size:13px; text-align:center; color:var(--ink-500); margin-bottom:24px }
-.login-field{ margin-bottom:14px }
-.login-field label{ display:block; font-size:12px; font-weight:600; color:var(--ink-700); margin-bottom:6px }
+.login-logo{ text-align:center; margin-bottom:1.75rem }
+.login-logo img{ width:200px; height:auto; display:block; margin:0 auto .75rem }
+.login-logo .cs-fallback{
+  font-size:1.5rem; font-weight:800; color:#0f172a;
+  letter-spacing:-.02em; margin-bottom:.5rem;
+}
+.login-logo h1{
+  font-size:1.25rem; color:#64748b; font-weight:500;
+  margin-top:.5rem; margin-bottom:.25rem;
+}
+.login-meta{
+  display:flex; flex-direction:column; align-items:center; gap:.3rem; margin-top:.75rem;
+}
+.login-pill{
+  display:inline-block; background:#3ECF8E; color:#fff;
+  font-size:.65rem; font-weight:700; padding:.2rem .6rem; border-radius:4px;
+  font-family:var(--font-mono);
+}
+.login-db{
+  display:inline-flex; align-items:center; gap:.3rem;
+  font-size:.7rem; color:#3ECF8E; font-family:var(--font-mono);
+}
+.login-db-dot{ width:6px; height:6px; background:#3ECF8E; border-radius:50%; display:inline-block }
+.login-build{ font-size:.65rem; color:#64748b; font-family:var(--font-mono) }
+.login-field{ margin-bottom:1.25rem }
+.login-field label{ display:block; font-size:.8125rem; font-weight:600; color:#0f172a; margin-bottom:.375rem }
 .login-field input{
-  width:100%; padding:10px 12px; border:1px solid var(--ink-200); border-radius:var(--r-sm);
-  background:#fff; font-size:14px; transition:border .12s, box-shadow .12s;
+  width:100%; padding:.75rem 1rem; font-size:.9375rem;
+  border:1px solid #cbd5e1; border-radius:8px; transition:border-color .2s; font-family:inherit;
 }
-.login-field input:focus{ outline:none; border-color:var(--accent-500); box-shadow:0 0 0 3px rgba(60,110,245,.15) }
+.login-field input:focus{ outline:none; border-color:#3b82f6 }
+.login-field input::placeholder{ color:#9ca3af }
 .login-btn{
-  width:100%; padding:11px 16px; border:none; border-radius:var(--r-sm); cursor:pointer;
-  background:linear-gradient(180deg, var(--accent-500), var(--accent-600));
-  color:#fff; font-weight:600; font-size:14px; margin-top:6px;
-  box-shadow:0 1px 0 rgba(255,255,255,.15) inset, 0 6px 14px -8px rgba(60,110,245,.55);
-  transition:transform .08s, box-shadow .12s;
+  width:100%; padding:.875rem; font-size:1rem; background:#3b82f6; color:#fff;
+  border:none; border-radius:8px; cursor:pointer; font-weight:600;
+  font-family:inherit; transition:background .15s;
 }
-.login-btn:hover{ transform:translateY(-1px); box-shadow:0 1px 0 rgba(255,255,255,.15) inset, 0 8px 18px -8px rgba(60,110,245,.7) }
-.login-btn:disabled{ opacity:.55; cursor:not-allowed; transform:none }
+.login-btn:hover{ background:#2563eb }
+.login-btn:disabled{ background:#94a3b8; cursor:not-allowed }
 .login-error{
-  background:#fef2f2; color:var(--danger-700); padding:9px 12px; border-radius:var(--r-sm);
-  font-size:12.5px; margin-bottom:14px; border:1px solid #fecaca;
+  background:#fef2f2; border:1px solid #fecaca; color:#991b1b;
+  padding:.75rem 1rem; border-radius:8px; margin-bottom:1rem; font-size:.875rem;
 }
-.login-footer{ text-align:center; margin-top:18px; color:var(--ink-400); font-size:11px; font-family:var(--font-mono) }
+.login-footer{ text-align:center; margin-top:1rem }
+.btn-link{
+  background:none; border:none; color:#3b82f6; font-size:.8125rem;
+  cursor:pointer; padding:0; text-decoration:underline; font-family:inherit;
+}
+.btn-link:hover{ color:#1d4ed8 }
 
 /* ============= APP SHELL ============= */
 .app{ display:grid; grid-template-columns:240px 1fr; min-height:100vh }
@@ -124,11 +148,17 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .rail-uname{ font-size:12.5px; font-weight:600; color:#fff; line-height:1.2 }
 .rail-urole{ font-size:10.5px; color:var(--rail-muted); font-family:var(--font-mono); margin-top:1px }
 .rail-signout{
-  margin-top:8px; display:flex; align-items:center; gap:8px; padding:6px 10px;
-  border-radius:6px; color:#c6ccda; cursor:pointer; font-size:12.5px;
-  transition:background .12s, color .12s;
+  margin-top:8px; width:100%;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  padding:7px 10px;
+  background:rgba(239,68,68,.14);
+  border:1px solid rgba(239,68,68,.32);
+  border-radius:7px; color:#fca5a5; cursor:pointer;
+  font-size:12.5px; font-weight:600;
+  transition:background .12s, color .12s, border-color .12s;
 }
-.rail-signout:hover{ background:rgba(239,68,68,.14); color:#fca5a5 }
+.rail-signout:hover{ background:rgba(239,68,68,.22); border-color:rgba(239,68,68,.5); color:#fecaca }
+.rail-signout .i{ width:13px; height:13px }
 .rail-version{ text-align:center; font-size:10px; color:var(--rail-muted); font-family:var(--font-mono); padding:8px 0 4px }
 
 /* ============= MAIN ============= */
@@ -330,32 +360,44 @@ table.opps tr:hover td{ background:#fafbfd }
   </defs>
 </svg>
 
-<!-- LOGIN -->
+<!-- LOGIN — matches RRP Quick Quote / Client Research pattern -->
 <div id="login-screen" class="login-screen">
   <div class="login-card">
     <div class="login-logo">
-      <svg width="120" height="32" viewBox="0 0 200 50" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="25" cy="25" r="20" fill="#3c6ef5"/>
-        <text x="25" y="32" font-family="Inter,sans-serif" font-size="22" font-weight="800" fill="#fff" text-anchor="middle">SP</text>
-        <text x="55" y="22" font-family="Inter,sans-serif" font-size="15" font-weight="700" fill="#0f172a">Cloudstaff</text>
-        <text x="55" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="500" fill="#64748b">Success Pilot Tracker</text>
-      </svg>
+      <img src="https://info.cloudstaff.com/hubfs/001%20SALES/Tools/Cloudstaff-No%20Tagline-Landscape-Color-Positive-No%20Keyline.png"
+           alt="Cloudstaff"
+           onerror="this.onerror=null;this.style.display='none';document.getElementById('cs-logo-fallback').style.display='block';">
+      <div id="cs-logo-fallback" class="cs-fallback" style="display:none">cloudstaff.</div>
+      <h1>Success Pilot Tracker</h1>
+      <div class="login-meta">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span class="login-pill" id="login-version-pill">v1 r5 Supabase</span>
+          <span class="login-db" id="login-db-badge">
+            <span class="login-db-dot" id="login-db-dot"></span>
+            <span id="login-db-text">Connected to database</span>
+          </span>
+        </div>
+        <div class="login-build" id="login-build">v1 r5 modular · build 2026-05-01</div>
+      </div>
     </div>
-    <div class="login-title">Sign in</div>
-    <div class="login-subtitle">Sales &amp; AM engagement tracker</div>
+
     <div id="login-error" class="login-error" style="display:none"></div>
     <form id="login-form">
       <div class="login-field">
         <label for="login-email">Email</label>
-        <input type="email" id="login-email" autocomplete="username" required placeholder="you@cloudstaff.com">
+        <input type="email" id="login-email" placeholder="Enter your email" autocomplete="username" required>
       </div>
       <div class="login-field">
         <label for="login-password">Password</label>
-        <input type="password" id="login-password" autocomplete="current-password" required>
+        <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" required>
       </div>
-      <button type="submit" id="login-btn" class="login-btn">Sign in</button>
+      <button type="submit" id="login-btn" class="login-btn">Sign In</button>
+      <div class="login-footer">
+        <button class="btn-link" type="button" id="show-forgot-btn"
+                title="Contact Lee Wade for an admin-initiated password reset"
+                onclick="event.preventDefault();alert('Password resets are admin-initiated. Please contact Lee Wade to reset your password.');">Forgot password?</button>
+      </div>
     </form>
-    <div class="login-footer" id="login-version">SP Tracker v1 r4</div>
   </div>
 </div>
 
@@ -395,7 +437,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r4</div>
+      <div class="rail-version">v1 r5</div>
     </div>
   </aside>
 
@@ -804,7 +846,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r4";
+const APP_VERSION   = "v1 r5";
 
 // Legacy SP attribution values from imported historical data — these are not
 // user accounts (people no longer in role) but still attributed to old engagements.
@@ -1654,7 +1696,10 @@ function bindEvents(){
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  $('login-version').textContent = `SP Tracker ${APP_VERSION}`;
+  // Version stamp on login card
+  const buildDate = new Date().toISOString().slice(0,10);
+  $('login-version-pill').textContent = `${APP_VERSION} Supabase`;
+  $('login-build').textContent = `${APP_VERSION} modular · build ${buildDate}`;
   bindEvents();
   if (tryRestoreSession()) {
     bootApp();
