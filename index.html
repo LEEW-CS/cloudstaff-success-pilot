@@ -355,7 +355,7 @@ table.opps tr:hover td{ background:#fafbfd }
       </div>
       <button type="submit" id="login-btn" class="login-btn">Sign in</button>
     </form>
-    <div class="login-footer" id="login-version">SP Tracker v1 r1</div>
+    <div class="login-footer" id="login-version">SP Tracker v1 r2</div>
   </div>
 </div>
 
@@ -395,7 +395,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r1</div>
+      <div class="rail-version">v1 r2</div>
     </div>
   </aside>
 
@@ -694,11 +694,14 @@ table.opps tr:hover td{ background:#fafbfd }
         <div class="card-head">
           <div class="card-title">Users</div>
           <div class="card-sub" id="users-count">0 users</div>
+          <button class="btn btn-primary" id="users-new" style="margin-left:auto">
+            <svg class="i" viewBox="0 0 24 24"><use href="#i-plus"/></svg>New User
+          </button>
         </div>
         <div class="table-wrap">
           <table class="opps">
             <thead><tr>
-              <th>Email</th><th>Full Name</th><th>Role</th><th>SP Attribution</th><th>Created</th>
+              <th>Email</th><th>Full Name</th><th>Role</th><th>SP Attribution</th><th>Created</th><th></th>
             </tr></thead>
             <tbody id="users-tbody"></tbody>
           </table>
@@ -709,6 +712,92 @@ table.opps tr:hover td{ background:#fafbfd }
   </main>
 </div>
 
+<!-- ============= USER MODAL (create / edit) ============= -->
+<div class="modal-bg" id="user-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="user-modal-title">New User</div>
+      <div class="modal-close" id="user-modal-close"><svg style="width:18px;height:18px" viewBox="0 0 24 24"><use href="#i-x"/></svg></div>
+    </div>
+    <div class="modal-body">
+      <form id="user-form" class="form-grid">
+        <input type="hidden" id="u-id">
+        <div class="form-field">
+          <label>Email<span class="req">*</span></label>
+          <input type="email" id="u-email" required maxlength="120" placeholder="user@cloudstaff.com">
+          <div class="form-hint" id="u-email-hint">Lowercased automatically. Must be unique.</div>
+        </div>
+        <div class="form-field">
+          <label>Full Name<span class="req">*</span></label>
+          <input type="text" id="u-name" required maxlength="120">
+        </div>
+        <div class="form-field">
+          <label>Role<span class="req">*</span></label>
+          <select id="u-role" required>
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>SP Attribution</label>
+          <select id="u-sp">
+            <option value="">— None (sees all if admin) —</option>
+          </select>
+          <div class="form-hint">Maps the user to the <code>sp</code> column on opportunities.</div>
+        </div>
+        <div class="form-field full" id="u-pw-wrap">
+          <label>Password<span class="req">*</span></label>
+          <input type="password" id="u-pw" autocomplete="new-password" minlength="8" maxlength="128">
+          <div class="form-hint">≥8 chars, must include uppercase, lowercase, number, and special character.</div>
+        </div>
+        <div class="full" id="u-form-error" style="color:var(--danger-700);font-size:12.5px;display:none"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <span id="u-form-status" class="muted mono" style="margin-right:auto"></span>
+      <button class="btn" id="user-modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="user-form-submit">
+        <svg class="i" viewBox="0 0 24 24"><use href="#i-check"/></svg>Save User
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============= RESET PASSWORD MODAL ============= -->
+<div class="modal-bg" id="pw-modal" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head">
+      <div class="modal-title">Reset Password</div>
+      <div class="modal-close" id="pw-modal-close"><svg style="width:18px;height:18px" viewBox="0 0 24 24"><use href="#i-x"/></svg></div>
+    </div>
+    <div class="modal-body">
+      <div class="form-field" style="margin-bottom:14px">
+        <label>User</label>
+        <input type="text" id="pw-user-display" disabled style="background:var(--ink-50)">
+      </div>
+      <form id="pw-form" class="form-grid">
+        <div class="form-field full">
+          <label>New Password<span class="req">*</span></label>
+          <input type="password" id="pw-new" required minlength="8" maxlength="128" autocomplete="new-password">
+          <div class="form-hint">≥8 chars, must include uppercase, lowercase, number, and special character.</div>
+        </div>
+        <div class="form-field full">
+          <label>Confirm New Password<span class="req">*</span></label>
+          <input type="password" id="pw-confirm" required minlength="8" maxlength="128" autocomplete="new-password">
+        </div>
+        <div class="full" id="pw-form-error" style="color:var(--danger-700);font-size:12.5px;display:none"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <span id="pw-form-status" class="muted mono" style="margin-right:auto"></span>
+      <button class="btn" id="pw-modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="pw-form-submit">
+        <svg class="i" viewBox="0 0 24 24"><use href="#i-check"/></svg>Reset Password
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
@@ -717,7 +806,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r1";
+const APP_VERSION   = "v1 r2";
 
 const SP_LIST = ["Marcial","Mimi","Ariel","Archie","Madee","Reo","Rodel","Jie"];
 
@@ -1200,17 +1289,195 @@ async function submitForm(e){
 /* ========================================================
    USERS PAGE
    ======================================================== */
+async function reloadUsers(){
+  allUsers = await sb("GET", "sp_users?select=*&order=created_at.asc") || [];
+}
+
 function renderUsersPage(){
-  $('users-count').textContent = `${allUsers.length} users`;
-  $('users-tbody').innerHTML = allUsers.map(u => `
-    <tr>
-      <td class="mono">${escapeHtml(u.email)}</td>
+  $('users-count').textContent = `${allUsers.length} user${allUsers.length===1?'':'s'}`;
+  $('users-tbody').innerHTML = allUsers.map(u => {
+    const isSelf = u.id === currentUser.id;
+    return `
+    <tr data-id="${u.id}">
+      <td class="mono">${escapeHtml(u.email)}${isSelf ? ' <span class="tag tag-open" style="margin-left:4px">you</span>' : ''}</td>
       <td>${escapeHtml(u.full_name)}</td>
       <td>${u.role === 'admin' ? '<span class="tag tag-cons">admin</span>' : '<span class="tag tag-open">user</span>'}</td>
       <td>${escapeHtml(u.sp_name || '—')}</td>
       <td class="mono">${fmtDate(u.created_at)}</td>
-    </tr>
-  `).join('');
+      <td>
+        <div class="row-actions">
+          <button class="btn-icon" data-act="edit" title="Edit user"><svg class="i" viewBox="0 0 24 24"><use href="#i-edit"/></svg></button>
+          <button class="btn-icon" data-act="reset" title="Reset password"><svg class="i" viewBox="0 0 24 24"><use href="#i-cloud"/></svg></button>
+          <button class="btn-icon danger" data-act="delete" title="${isSelf?'Cannot delete yourself':'Delete user'}" ${isSelf?'disabled style="opacity:.4;cursor:not-allowed"':''}><svg class="i" viewBox="0 0 24 24"><use href="#i-trash"/></svg></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" class="empty-state">No users.</td></tr>';
+}
+
+/* ----------- User modal (create / edit) ----------- */
+let editingUserId = null;
+
+function openUserModal(user){
+  editingUserId = user ? user.id : null;
+  $('user-modal-title').textContent = user ? 'Edit User' : 'New User';
+  $('user-form-error').style.display = 'none';
+  $('u-id').value     = user?.id   || '';
+  $('u-email').value  = user?.email || '';
+  $('u-email').disabled = !!user; // email is the unique key — don't allow change
+  $('u-name').value   = user?.full_name || '';
+  $('u-role').value   = user?.role || 'user';
+
+  // Populate SP dropdown
+  const usp = $('u-sp');
+  usp.innerHTML = '<option value="">— None —</option>' +
+    SP_LIST.map(sp => `<option value="${sp}" ${user?.sp_name===sp?'selected':''}>${sp}</option>`).join('');
+  if (user?.sp_name) usp.value = user.sp_name;
+
+  // Password field — required on create, optional on edit (use Reset PW for edits)
+  const pwWrap = $('u-pw-wrap');
+  if (user) {
+    pwWrap.style.display = 'none';
+    $('u-pw').required = false;
+    $('u-pw').value = '';
+  } else {
+    pwWrap.style.display = '';
+    $('u-pw').required = true;
+    $('u-pw').value = '';
+  }
+  $('user-modal').style.display = 'flex';
+  setTimeout(()=>$('u-email').disabled ? $('u-name').focus() : $('u-email').focus(), 50);
+}
+
+function closeUserModal(){
+  $('user-modal').style.display = 'none';
+  editingUserId = null;
+}
+
+function pwComplexityError(pw){
+  if (pw.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[A-Z]/.test(pw)) return 'Password must include an uppercase letter.';
+  if (!/[a-z]/.test(pw)) return 'Password must include a lowercase letter.';
+  if (!/\d/.test(pw))    return 'Password must include a number.';
+  if (!/[^A-Za-z0-9]/.test(pw)) return 'Password must include a special character.';
+  return null;
+}
+
+async function submitUserForm(e){
+  if (e) e.preventDefault();
+  const errEl = $('user-form-error');
+  errEl.style.display = 'none';
+  const submitBtn = $('user-form-submit');
+  submitBtn.disabled = true;
+  $('u-form-status').textContent = 'Saving…';
+
+  try {
+    const email   = $('u-email').value.trim().toLowerCase();
+    const name    = $('u-name').value.trim();
+    const role    = $('u-role').value;
+    const sp_name = $('u-sp').value || null;
+
+    if (!email || !name) throw new Error('Email and full name are required.');
+    if (!/^.+@.+\..+$/.test(email)) throw new Error('Invalid email address.');
+
+    if (editingUserId) {
+      // Update — protect: admin cannot demote themselves to 'user'
+      if (editingUserId === currentUser.id && role !== 'admin') {
+        throw new Error('You cannot remove your own admin role.');
+      }
+      const payload = { full_name: name, role, sp_name };
+      const updated = await sb("PATCH", `sp_users?id=eq.${editingUserId}`, payload, "return=representation");
+      if (updated && updated[0] && updated[0].id === currentUser.id) {
+        currentUser = { ...currentUser, ...updated[0] };
+        sessionStorage.setItem('sp_user', JSON.stringify(currentUser));
+        $('rail-uname').textContent = currentUser.full_name;
+        $('rail-urole').textContent = currentUser.role + (currentUser.sp_name ? ' · ' + currentUser.sp_name : '');
+      }
+      toast('User updated.', 'success');
+    } else {
+      // Create — password required + complexity
+      const pw = $('u-pw').value;
+      const pwErr = pwComplexityError(pw);
+      if (pwErr) throw new Error(pwErr);
+      const password_hash = await sha256Hex(pw);
+      // Pre-check email uniqueness (cheap UX win — DB also has UNIQUE constraint)
+      const existing = await sb("GET", `sp_users?email=eq.${encodeURIComponent(email)}&select=id`);
+      if (existing && existing.length) throw new Error('A user with that email already exists.');
+      await sb("POST", "sp_users", [{ email, full_name: name, role, sp_name, password_hash }], "return=minimal");
+      toast('User created.', 'success');
+    }
+    await reloadUsers();
+    renderUsersPage();
+    closeUserModal();
+  } catch (err) {
+    errEl.textContent = err.message || 'Save failed.';
+    errEl.style.display = 'block';
+  } finally {
+    submitBtn.disabled = false;
+    $('u-form-status').textContent = '';
+  }
+}
+
+async function deleteUser(u){
+  if (u.id === currentUser.id) { toast('You cannot delete yourself.', 'error'); return; }
+  if (!confirm(`Delete user ${u.email}?\n\nThis cannot be undone.`)) return;
+  try {
+    await sb("DELETE", `sp_users?id=eq.${u.id}`);
+    toast(`User ${u.email} deleted.`, 'success');
+    await reloadUsers();
+    renderUsersPage();
+  } catch (err) {
+    toast('Delete failed: ' + err.message, 'error');
+  }
+}
+
+/* ----------- Reset password modal ----------- */
+let resetUserId = null;
+
+function openResetPasswordModal(user){
+  resetUserId = user.id;
+  $('pw-user-display').value = `${user.full_name}  <${user.email}>`;
+  $('pw-new').value = '';
+  $('pw-confirm').value = '';
+  $('pw-form-error').style.display = 'none';
+  $('pw-modal').style.display = 'flex';
+  setTimeout(()=>$('pw-new').focus(), 50);
+}
+
+function closeResetPasswordModal(){
+  $('pw-modal').style.display = 'none';
+  resetUserId = null;
+}
+
+async function submitPasswordReset(e){
+  if (e) e.preventDefault();
+  const errEl = $('pw-form-error');
+  errEl.style.display = 'none';
+  const submitBtn = $('pw-form-submit');
+  submitBtn.disabled = true;
+  $('pw-form-status').textContent = 'Resetting…';
+
+  try {
+    const pw = $('pw-new').value;
+    const cf = $('pw-confirm').value;
+    if (pw !== cf) throw new Error('Passwords do not match.');
+    const pwErr = pwComplexityError(pw);
+    if (pwErr) throw new Error(pwErr);
+    const hash = await sha256Hex(pw);
+    await sb("PATCH", `sp_users?id=eq.${resetUserId}`, { password_hash: hash }, "return=minimal");
+    if (resetUserId === currentUser.id) {
+      currentUser.password_hash = hash;
+      sessionStorage.setItem('sp_user', JSON.stringify(currentUser));
+    }
+    toast('Password reset.', 'success');
+    closeResetPasswordModal();
+  } catch (err) {
+    errEl.textContent = err.message || 'Reset failed.';
+    errEl.style.display = 'block';
+  } finally {
+    submitBtn.disabled = false;
+    $('pw-form-status').textContent = '';
+  }
 }
 
 /* ========================================================
@@ -1305,6 +1572,33 @@ function bindEvents(){
   // Form
   $('opp-form').addEventListener('submit', submitForm);
   $('opp-form-cancel').addEventListener('click', () => { editingId = null; showPage('opportunities') });
+
+  // Users page — new + row actions
+  $('users-new').addEventListener('click', () => openUserModal(null));
+  $('users-tbody').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn || btn.disabled) return;
+    const id = btn.closest('tr').dataset.id;
+    const u = allUsers.find(x => x.id === id);
+    if (!u) return;
+    if (btn.dataset.act === 'edit')   openUserModal(u);
+    if (btn.dataset.act === 'reset')  openResetPasswordModal(u);
+    if (btn.dataset.act === 'delete') deleteUser(u);
+  });
+
+  // User modal
+  $('user-modal-close').addEventListener('click', closeUserModal);
+  $('user-modal-cancel').addEventListener('click', closeUserModal);
+  $('user-form-submit').addEventListener('click', submitUserForm);
+  $('user-form').addEventListener('submit', submitUserForm);
+  $('user-modal').addEventListener('click', (e) => { if (e.target.id === 'user-modal') closeUserModal(); });
+
+  // Reset PW modal
+  $('pw-modal-close').addEventListener('click', closeResetPasswordModal);
+  $('pw-modal-cancel').addEventListener('click', closeResetPasswordModal);
+  $('pw-form-submit').addEventListener('click', submitPasswordReset);
+  $('pw-form').addEventListener('submit', submitPasswordReset);
+  $('pw-modal').addEventListener('click', (e) => { if (e.target.id === 'pw-modal') closeResetPasswordModal(); });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
