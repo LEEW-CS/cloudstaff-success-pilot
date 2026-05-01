@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Success Pilot Tracker — Cloudstaff</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>
+:root{
+  --rail-bg-top:#1e2538; --rail-bg-bot:#131826; --rail-border:#0e1320;
+  --rail-fg:#dfe3ee; --rail-muted:#7f87a0; --rail-label:#8a93ad;
+  --rail-item-hover:#262d42; --rail-active:#3c6ef5; --rail-active-fg:#ffffff;
+  --rail-divider:#2a3147;
+
+  --bg-page:#f3f4f8; --bg-card:#ffffff;
+  --ink-900:#0f172a; --ink-800:#1e293b; --ink-700:#334155;
+  --ink-600:#475569; --ink-500:#64748b; --ink-400:#94a3b8;
+  --ink-300:#cbd5e1; --ink-200:#e2e8f0; --ink-100:#eef1f6; --ink-50:#f6f8fb;
+
+  --accent-50:#eef3ff; --accent-100:#dbe6ff; --accent-300:#8ab0ff;
+  --accent-500:#3c6ef5; --accent-600:#2e5de0; --accent-700:#1f49c2;
+
+  --grad-a:#3b82f6; --grad-b:#22d3ee;
+  --strip-bg:#0f172a; --strip-fg:#e5e7eb;
+
+  --danger-500:#ef4444; --danger-600:#dc2626; --danger-700:#b91c1c;
+  --success-50:#ecfdf5; --success-500:#10b981; --success-700:#047857;
+  --warn-50:#fffbeb; --warn-500:#f59e0b; --warn-700:#b45309;
+
+  --r-xs:4px; --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:18px; --r-pill:999px;
+  --shadow-xs:0 1px 0 rgba(15,23,42,.04);
+  --shadow-sm:0 1px 2px rgba(15,23,42,.06), 0 1px 1px rgba(15,23,42,.04);
+  --shadow-md:0 8px 20px -8px rgba(15,23,42,.14), 0 2px 4px rgba(15,23,42,.04);
+  --shadow-lg:0 20px 40px -18px rgba(15,23,42,.22), 0 4px 8px rgba(15,23,42,.05);
+
+  --font-sans:'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --row-h:40px; --pad-card:20px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{font-family:var(--font-sans);color:var(--ink-800);background:var(--bg-page);font-size:14px}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+
+/* ============= LOGIN ============= */
+.login-screen{
+  position:fixed; inset:0;
+  background:linear-gradient(180deg, #1e2538 0%, #131826 100%);
+  display:flex; align-items:center; justify-content:center; padding:20px; z-index:100;
+}
+.login-card{
+  background:#fff; border-radius:var(--r-xl); padding:32px;
+  width:100%; max-width:380px;
+  box-shadow:0 24px 60px -20px rgba(0,0,0,.5);
+}
+.login-logo{ display:flex; justify-content:center; margin-bottom:18px }
+.login-logo img{ height:32px }
+.login-title{ font-size:20px; font-weight:700; text-align:center; color:var(--ink-900); margin-bottom:6px }
+.login-subtitle{ font-size:13px; text-align:center; color:var(--ink-500); margin-bottom:24px }
+.login-field{ margin-bottom:14px }
+.login-field label{ display:block; font-size:12px; font-weight:600; color:var(--ink-700); margin-bottom:6px }
+.login-field input{
+  width:100%; padding:10px 12px; border:1px solid var(--ink-200); border-radius:var(--r-sm);
+  background:#fff; font-size:14px; transition:border .12s, box-shadow .12s;
+}
+.login-field input:focus{ outline:none; border-color:var(--accent-500); box-shadow:0 0 0 3px rgba(60,110,245,.15) }
+.login-btn{
+  width:100%; padding:11px 16px; border:none; border-radius:var(--r-sm); cursor:pointer;
+  background:linear-gradient(180deg, var(--accent-500), var(--accent-600));
+  color:#fff; font-weight:600; font-size:14px; margin-top:6px;
+  box-shadow:0 1px 0 rgba(255,255,255,.15) inset, 0 6px 14px -8px rgba(60,110,245,.55);
+  transition:transform .08s, box-shadow .12s;
+}
+.login-btn:hover{ transform:translateY(-1px); box-shadow:0 1px 0 rgba(255,255,255,.15) inset, 0 8px 18px -8px rgba(60,110,245,.7) }
+.login-btn:disabled{ opacity:.55; cursor:not-allowed; transform:none }
+.login-error{
+  background:#fef2f2; color:var(--danger-700); padding:9px 12px; border-radius:var(--r-sm);
+  font-size:12.5px; margin-bottom:14px; border:1px solid #fecaca;
+}
+.login-footer{ text-align:center; margin-top:18px; color:var(--ink-400); font-size:11px; font-family:var(--font-mono) }
+
+/* ============= APP SHELL ============= */
+.app{ display:grid; grid-template-columns:240px 1fr; min-height:100vh }
+
+.rail{
+  background:linear-gradient(180deg, var(--rail-bg-top) 0%, var(--rail-bg-bot) 100%);
+  border-right:1px solid var(--rail-border); color:var(--rail-fg);
+  display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
+  padding:14px 10px 8px; overflow-y:auto;
+}
+.rail-head{ padding:6px 8px 14px; border-bottom:1px solid var(--rail-divider); margin-bottom:10px }
+.brand{ font-size:15px; font-weight:700; color:#fff; line-height:1.1 }
+.brand span{ display:block; font-size:11px; font-weight:500; color:var(--rail-muted); margin-top:3px }
+.dbstatus{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--rail-muted); margin-top:8px; font-family:var(--font-mono) }
+.dot{ width:6px; height:6px; background:#10b981; border-radius:50%; box-shadow:0 0 0 3px rgba(16,185,129,.18) }
+.dot.off{ background:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.18) }
+
+.rail-label{ font-size:10.5px; font-weight:700; color:var(--rail-label); text-transform:uppercase; letter-spacing:.08em; padding:14px 10px 6px }
+.rail-item{
+  display:flex; align-items:center; gap:9px; padding:7px 10px;
+  border-radius:7px; color:#c6ccda; cursor:pointer; font-size:13px; font-weight:500;
+  user-select:none; transition:background .12s, color .12s;
+}
+.rail-item:hover{ background:var(--rail-item-hover); color:#fff }
+.rail-item.active{ background:var(--rail-active); color:#fff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.08) }
+.rail-item .i{ width:15px; height:15px; flex:0 0 auto; opacity:.85 }
+.rail-item.active .i{ opacity:1 }
+.rail-item .meta{ margin-left:auto; font-size:10.5px; color:var(--rail-muted); font-family:var(--font-mono) }
+
+.rail-foot{ margin-top:auto; padding:10px 8px 4px; border-top:1px solid var(--rail-divider) }
+.rail-user{ display:flex; align-items:center; gap:10px; padding:6px 8px }
+.rail-avatar{
+  width:30px; height:30px; border-radius:50%; flex:0 0 auto;
+  background:linear-gradient(135deg, var(--grad-a), var(--grad-b));
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:12px;
+}
+.rail-uname{ font-size:12.5px; font-weight:600; color:#fff; line-height:1.2 }
+.rail-urole{ font-size:10.5px; color:var(--rail-muted); font-family:var(--font-mono); margin-top:1px }
+.rail-signout{
+  margin-top:8px; display:flex; align-items:center; gap:8px; padding:6px 10px;
+  border-radius:6px; color:#c6ccda; cursor:pointer; font-size:12.5px;
+  transition:background .12s, color .12s;
+}
+.rail-signout:hover{ background:rgba(239,68,68,.14); color:#fca5a5 }
+.rail-version{ text-align:center; font-size:10px; color:var(--rail-muted); font-family:var(--font-mono); padding:8px 0 4px }
+
+/* ============= MAIN ============= */
+.main{ display:flex; flex-direction:column; min-width:0 }
+.topbar{
+  height:56px; display:flex; align-items:center; gap:16px; padding:0 28px;
+  border-bottom:1px solid var(--ink-200); background:#fff; position:sticky; top:0; z-index:10;
+}
+.topbar-title{ font-size:15px; font-weight:600; color:var(--ink-900) }
+.topbar-spacer{ flex:1 }
+.topbar-pill{
+  display:inline-flex; align-items:center; gap:6px; padding:5px 11px;
+  background:var(--ink-50); border:1px solid var(--ink-200); border-radius:var(--r-pill);
+  font-size:12px; color:var(--ink-700); font-family:var(--font-mono);
+}
+
+.page-body{ padding:24px 28px; max-width:100%; display:flex; flex-direction:column; gap:20px }
+
+.card{
+  background:#fff; border:1px solid var(--ink-200); border-radius:var(--r-lg);
+  box-shadow:var(--shadow-xs); overflow:hidden;
+}
+.card-head{
+  padding:14px 20px; border-bottom:1px solid var(--ink-200);
+  display:flex; align-items:center; gap:12px;
+}
+.card-title{ font-size:14px; font-weight:600; color:var(--ink-900) }
+.card-sub{ font-size:12px; color:var(--ink-500); margin-left:auto; font-family:var(--font-mono) }
+.card-body{ padding:18px 20px }
+
+/* ============= FILTERS ============= */
+.filters{ display:flex; flex-wrap:wrap; gap:10px; align-items:center }
+.filter{ display:flex; flex-direction:column; gap:4px; min-width:140px }
+.filter label{ font-size:11px; font-weight:600; color:var(--ink-600); text-transform:uppercase; letter-spacing:.04em }
+.filter select, .filter input{
+  padding:7px 10px; border:1px solid var(--ink-200); border-radius:var(--r-sm);
+  background:#fff; font-size:13px; color:var(--ink-800); cursor:pointer;
+}
+.filter select:focus, .filter input:focus{ outline:none; border-color:var(--accent-500); box-shadow:0 0 0 3px rgba(60,110,245,.12) }
+
+/* ============= KPI TILES ============= */
+.kpi-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px }
+@media (max-width:1100px){ .kpi-grid{ grid-template-columns:repeat(2,1fr) } }
+.kpi{
+  background:#fff; border:1px solid var(--ink-200); border-radius:var(--r-lg);
+  padding:16px 18px; box-shadow:var(--shadow-xs); display:flex; flex-direction:column; gap:6px;
+}
+.kpi-label{ font-size:12px; font-weight:600; color:var(--ink-600); text-transform:uppercase; letter-spacing:.03em }
+.kpi-value{ font-size:32px; font-weight:800; color:var(--accent-600); line-height:1.1; font-family:var(--font-mono); letter-spacing:-.02em }
+.kpi.kpi-won  .kpi-value{ color:var(--success-700) }
+.kpi.kpi-lost .kpi-value{ color:var(--danger-600) }
+.kpi.kpi-rep  .kpi-value{ color:var(--warn-700) }
+.kpi.kpi-seats .kpi-value{ color:#0e7490 }
+.kpi-empty .kpi-value::after{ content:'– –' }
+
+/* ============= CHARTS ============= */
+.charts-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px }
+@media (max-width:1100px){ .charts-row{ grid-template-columns:1fr } }
+.chart-card{
+  background:#fff; border:1px solid var(--ink-200); border-radius:var(--r-lg);
+  padding:16px 18px; box-shadow:var(--shadow-xs);
+}
+.chart-title{ font-size:13.5px; font-weight:600; color:var(--ink-900); margin-bottom:10px }
+.chart-canvas-wrap{ position:relative; height:240px }
+.charts-row-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px }
+@media (max-width:1100px){ .charts-row-2{ grid-template-columns:1fr } }
+
+/* ============= TABLE ============= */
+.table-wrap{ overflow-x:auto; border-top:1px solid var(--ink-200) }
+table.opps{ width:100%; border-collapse:collapse; font-size:12.5px }
+table.opps th{
+  background:var(--ink-50); color:var(--ink-700); font-weight:600; text-align:left;
+  padding:9px 10px; border-bottom:1px solid var(--ink-200); white-space:nowrap;
+  position:sticky; top:0; z-index:1;
+}
+table.opps td{
+  padding:8px 10px; border-bottom:1px solid var(--ink-100); color:var(--ink-800);
+  vertical-align:middle; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+table.opps tr:hover td{ background:#fafbfd }
+.tag{
+  display:inline-flex; align-items:center; gap:4px; padding:2px 8px;
+  font-size:11px; font-weight:600; border-radius:var(--r-pill);
+  font-family:var(--font-mono); letter-spacing:.02em; line-height:1.5;
+}
+.tag-open  { background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe }
+.tag-won   { background:var(--success-50); color:var(--success-700); border:1px solid #a7f3d0 }
+.tag-lost  { background:#fef2f2; color:var(--danger-700); border:1px solid #fecaca }
+.tag-cons  { background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe }
+.tag-hold  { background:var(--warn-50); color:var(--warn-700); border:1px solid #fde68a }
+.tag-type-organic    { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0 }
+.tag-type-newlogo    { background:var(--accent-50); color:var(--accent-700); border:1px solid var(--accent-100) }
+.tag-type-replacement{ background:var(--warn-50); color:var(--warn-700); border:1px solid #fde68a }
+.tag-type-amcons     { background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe }
+
+.row-actions{ display:flex; gap:6px; white-space:nowrap }
+.btn-icon{
+  width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center;
+  border:1px solid var(--ink-200); background:#fff; border-radius:var(--r-sm); cursor:pointer;
+  color:var(--ink-600); transition:background .12s, color .12s, border-color .12s;
+}
+.btn-icon:hover{ background:var(--ink-50); color:var(--ink-900) }
+.btn-icon.danger:hover{ background:#fef2f2; color:var(--danger-600); border-color:#fecaca }
+.btn-icon .i{ width:14px; height:14px }
+
+/* ============= BUTTONS / FORMS ============= */
+.btn{
+  padding:8px 14px; border:1px solid var(--ink-200); background:#fff;
+  border-radius:var(--r-sm); cursor:pointer; font-weight:500; font-size:13px;
+  display:inline-flex; align-items:center; gap:6px; transition:background .12s, border-color .12s;
+}
+.btn:hover{ background:var(--ink-50) }
+.btn-primary{
+  background:linear-gradient(180deg, var(--accent-500), var(--accent-600));
+  color:#fff; border-color:transparent; font-weight:600;
+  box-shadow:0 1px 0 rgba(255,255,255,.15) inset, 0 6px 14px -8px rgba(60,110,245,.55);
+}
+.btn-primary:hover{ background:linear-gradient(180deg, var(--accent-600), var(--accent-700)) }
+.btn-danger{ color:var(--danger-700); border-color:#fecaca; background:#fef2f2 }
+.btn-danger:hover{ background:#fee2e2 }
+.btn-ghost{ background:transparent; border-color:transparent }
+.btn-ghost:hover{ background:var(--ink-100) }
+.btn .i{ width:14px; height:14px }
+.btn-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+
+/* form */
+.form-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:14px }
+@media (max-width:800px){ .form-grid{ grid-template-columns:1fr } }
+.form-grid .full{ grid-column:1/-1 }
+.form-field{ display:flex; flex-direction:column; gap:5px }
+.form-field label{ font-size:12px; font-weight:600; color:var(--ink-700) }
+.form-field label .req{ color:var(--danger-500); margin-left:2px }
+.form-field input, .form-field select, .form-field textarea{
+  padding:9px 11px; border:1px solid var(--ink-200); border-radius:var(--r-sm);
+  background:#fff; font-size:13px; color:var(--ink-800); transition:border .12s, box-shadow .12s;
+}
+.form-field textarea{ min-height:72px; resize:vertical; font-family:inherit }
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus{
+  outline:none; border-color:var(--accent-500); box-shadow:0 0 0 3px rgba(60,110,245,.12);
+}
+.form-field input[type=number]{ font-family:var(--font-mono) }
+.form-hint{ font-size:11px; color:var(--ink-500) }
+
+/* ============= MODAL ============= */
+.modal-bg{
+  position:fixed; inset:0; background:rgba(15,23,42,.55); backdrop-filter:blur(2px);
+  display:flex; align-items:center; justify-content:center; z-index:50; padding:20px;
+}
+.modal{
+  background:#fff; border-radius:var(--r-lg); max-width:720px; width:100%;
+  max-height:90vh; display:flex; flex-direction:column; box-shadow:var(--shadow-lg);
+}
+.modal-head{
+  padding:16px 22px; border-bottom:1px solid var(--ink-200);
+  display:flex; align-items:center; gap:10px;
+}
+.modal-title{ font-size:15px; font-weight:600; color:var(--ink-900) }
+.modal-close{ margin-left:auto; cursor:pointer; padding:4px; border-radius:6px; color:var(--ink-500) }
+.modal-close:hover{ background:var(--ink-100); color:var(--ink-800) }
+.modal-body{ padding:20px 22px; overflow-y:auto; flex:1 }
+.modal-foot{ padding:14px 22px; border-top:1px solid var(--ink-200); display:flex; gap:10px; justify-content:flex-end }
+
+/* toast */
+.toast-wrap{ position:fixed; top:18px; right:18px; z-index:60; display:flex; flex-direction:column; gap:8px }
+.toast{
+  background:#fff; border:1px solid var(--ink-200); border-left:4px solid var(--accent-500);
+  border-radius:var(--r-sm); padding:10px 14px; min-width:240px;
+  box-shadow:var(--shadow-md); font-size:13px; color:var(--ink-800);
+  animation:slideIn .2s ease;
+}
+.toast.success{ border-left-color:var(--success-500) }
+.toast.error{ border-left-color:var(--danger-500) }
+@keyframes slideIn{ from{transform:translateX(20px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+/* misc */
+.empty-state{ padding:40px; text-align:center; color:var(--ink-500); font-size:13px }
+.spinner{ display:inline-block; width:14px; height:14px; border:2px solid var(--ink-300); border-top-color:var(--accent-500); border-radius:50%; animation:spin .7s linear infinite }
+@keyframes spin{ to{ transform:rotate(360deg) } }
+.muted{ color:var(--ink-500) }
+.mono{ font-family:var(--font-mono) }
+</style>
+</head>
+<body>
+
+<!-- icons -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="i-dash"><path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 9h8V3h-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></g>
+    <g id="i-list"><path d="M8 6h13M8 12h13M8 18h13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></g>
+    <g id="i-plus"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+    <g id="i-users"><circle cx="9" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="17" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21.5 19c0-2.3-1.8-4-4.5-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+    <g id="i-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></g>
+    <g id="i-trash"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-x"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+    <g id="i-exit"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-search"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+    <g id="i-check"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-cloud"><path d="M18 10h-1.3A8 8 0 1 0 4 16.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 18a4 4 0 1 0 8 0 4 4 0 0 0-4-4 4 4 0 0 0-4 4z" fill="none" stroke="currentColor" stroke-width="2"/></g>
+  </defs>
+</svg>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg width="120" height="32" viewBox="0 0 200 50" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="25" cy="25" r="20" fill="#3c6ef5"/>
+        <text x="25" y="32" font-family="Inter,sans-serif" font-size="22" font-weight="800" fill="#fff" text-anchor="middle">SP</text>
+        <text x="55" y="22" font-family="Inter,sans-serif" font-size="15" font-weight="700" fill="#0f172a">Cloudstaff</text>
+        <text x="55" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="500" fill="#64748b">Success Pilot Tracker</text>
+      </svg>
+    </div>
+    <div class="login-title">Sign in</div>
+    <div class="login-subtitle">Sales &amp; AM engagement tracker</div>
+    <div id="login-error" class="login-error" style="display:none"></div>
+    <form id="login-form">
+      <div class="login-field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" autocomplete="username" required placeholder="you@cloudstaff.com">
+      </div>
+      <div class="login-field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" id="login-btn" class="login-btn">Sign in</button>
+    </form>
+    <div class="login-footer" id="login-version">SP Tracker v1 r1</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="app" style="display:none">
+  <aside class="rail">
+    <div class="rail-head">
+      <div class="brand">Success Pilot<span>Engagement Tracker</span></div>
+      <div class="dbstatus"><span class="dot" id="rail-dot"></span><span id="rail-dbtxt">Connected</span></div>
+    </div>
+
+    <div class="rail-label">Tracker</div>
+    <div class="rail-item active" data-page="dashboard">
+      <svg class="i" viewBox="0 0 24 24"><use href="#i-dash"/></svg>Dashboard
+    </div>
+    <div class="rail-item" data-page="opportunities">
+      <svg class="i" viewBox="0 0 24 24"><use href="#i-list"/></svg>Opportunities
+      <span class="meta" id="rail-opp-count">0</span>
+    </div>
+    <div class="rail-item" data-page="new-opp">
+      <svg class="i" viewBox="0 0 24 24"><use href="#i-plus"/></svg>New Opportunity
+    </div>
+
+    <div class="rail-label" id="rail-admin-label" style="display:none">Administration</div>
+    <div class="rail-item" data-page="users" id="rail-users-item" style="display:none">
+      <svg class="i" viewBox="0 0 24 24"><use href="#i-users"/></svg>Users
+    </div>
+
+    <div class="rail-foot">
+      <div class="rail-user">
+        <div class="rail-avatar" id="rail-avatar">?</div>
+        <div>
+          <div class="rail-uname" id="rail-uname">—</div>
+          <div class="rail-urole" id="rail-urole">—</div>
+        </div>
+      </div>
+      <div class="rail-signout" id="rail-signout">
+        <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
+      </div>
+      <div class="rail-version">v1 r1</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-spacer"></div>
+      <div class="topbar-pill"><svg style="width:13px;height:13px;color:var(--accent-600)" viewBox="0 0 24 24"><use href="#i-cloud"/></svg><span id="topbar-source">Supabase</span></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section id="page-dashboard" class="page page-body">
+      <div class="card">
+        <div class="card-body">
+          <div class="filters">
+            <div class="filter">
+              <label>Success Pilot</label>
+              <select id="dash-sp"></select>
+            </div>
+            <div class="filter">
+              <label>Year</label>
+              <select id="dash-year"></select>
+            </div>
+            <div class="filter">
+              <label>Month</label>
+              <select id="dash-month">
+                <option value="">All months</option>
+                <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+                <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+                <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+                <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+              </select>
+            </div>
+            <div class="filter" style="min-width:160px">
+              <label>Status</label>
+              <select id="dash-status">
+                <option value="">All statuses</option>
+                <option value="Open / In Progress">Open / In Progress</option>
+                <option value="Closed / Won">Closed / Won</option>
+                <option value="Closed / Lost">Closed / Lost</option>
+                <option value="Closed / Consultation">Closed / Consultation</option>
+                <option value="On-Hold">On-Hold</option>
+              </select>
+            </div>
+            <button class="btn btn-ghost" id="dash-reset" style="margin-left:auto;align-self:flex-end">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Client Count</div><div class="kpi-value" id="kpi-client">0</div></div>
+        <div class="kpi kpi-seats"><div class="kpi-label">Total Seats</div><div class="kpi-value" id="kpi-seats">0</div></div>
+        <div class="kpi kpi-won"><div class="kpi-label">Closed Won</div><div class="kpi-value" id="kpi-won">0</div></div>
+        <div class="kpi kpi-lost"><div class="kpi-label">Closed Lost</div><div class="kpi-value" id="kpi-lost">0</div></div>
+        <div class="kpi kpi-rep"><div class="kpi-label">Replacement</div><div class="kpi-value" id="kpi-rep">0</div></div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Client Count Breakdown</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-client"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Total Seats Breakdown</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-seats"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Closed Won Breakdown</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-won"></canvas></div>
+        </div>
+      </div>
+
+      <div class="charts-row-2">
+        <div class="chart-card">
+          <div class="chart-title">Client Count Progression</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-progression"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Engagement Status by Client Count</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-status"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Opportunities</div>
+          <div class="card-sub" id="dash-opps-count">0 rows</div>
+        </div>
+        <div class="table-wrap">
+          <table class="opps">
+            <thead><tr>
+              <th>SP</th><th>Client</th><th>Describe Opportunity</th><th>BDM/AM</th>
+              <th>Type</th><th>Status</th><th>Start</th><th>New</th><th>Repl.</th>
+            </tr></thead>
+            <tbody id="dash-opps-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- OPPORTUNITIES -->
+    <section id="page-opportunities" class="page page-body" style="display:none">
+      <div class="card">
+        <div class="card-body">
+          <div class="filters">
+            <div class="filter" style="min-width:220px">
+              <label>Search</label>
+              <input type="text" id="opp-search" placeholder="Client / opportunity / JR-ID...">
+            </div>
+            <div class="filter">
+              <label>Success Pilot</label>
+              <select id="opp-sp"></select>
+            </div>
+            <div class="filter">
+              <label>Status</label>
+              <select id="opp-status">
+                <option value="">All</option>
+                <option>Open / In Progress</option>
+                <option>Closed / Won</option>
+                <option>Closed / Lost</option>
+                <option>Closed / Consultation</option>
+                <option>On-Hold</option>
+              </select>
+            </div>
+            <div class="filter">
+              <label>Type</label>
+              <select id="opp-type">
+                <option value="">All</option>
+                <option>Sales New Logo</option>
+                <option>Sales Organic</option>
+                <option>Replacement</option>
+                <option>AM Consultation</option>
+              </select>
+            </div>
+            <div class="filter">
+              <label>Year</label>
+              <select id="opp-year"></select>
+            </div>
+            <button class="btn btn-primary" id="opp-new" style="margin-left:auto;align-self:flex-end">
+              <svg class="i" viewBox="0 0 24 24"><use href="#i-plus"/></svg>New Opportunity
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">All Opportunities</div>
+          <div class="card-sub" id="opp-count">0 rows</div>
+        </div>
+        <div class="table-wrap">
+          <table class="opps">
+            <thead><tr>
+              <th>SP</th><th>Client</th><th>Describe Opportunity</th><th>JRID</th><th>BDM/AM</th>
+              <th>Type</th><th>Status</th><th>Start</th><th>New</th><th>Repl.</th><th></th>
+            </tr></thead>
+            <tbody id="opp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW / EDIT OPP -->
+    <section id="page-new-opp" class="page page-body" style="display:none">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title" id="opp-form-title">New Opportunity</div>
+          <div class="card-sub" id="opp-form-sub">Add a new sales / AM engagement</div>
+        </div>
+        <div class="card-body">
+          <form id="opp-form" class="form-grid">
+            <input type="hidden" id="f-id">
+            <div class="form-field">
+              <label>Success Pilot<span class="req">*</span></label>
+              <select id="f-sp" required></select>
+            </div>
+            <div class="form-field">
+              <label>Engagement Start Date<span class="req">*</span></label>
+              <input type="date" id="f-date" required>
+            </div>
+            <div class="form-field full">
+              <label>Describe Opportunity<span class="req">*</span></label>
+              <input type="text" id="f-describe" required maxlength="500" placeholder="e.g. Initial Client Call | Backend Developer">
+            </div>
+            <div class="form-field">
+              <label>Client Name<span class="req">*</span></label>
+              <input type="text" id="f-client" required maxlength="200">
+            </div>
+            <div class="form-field">
+              <label>BDM / AM Name</label>
+              <input type="text" id="f-bdm" maxlength="100">
+            </div>
+            <div class="form-field">
+              <label>JRID / Uberticket</label>
+              <input type="text" id="f-jrid" maxlength="100" placeholder="e.g. JR-6774">
+            </div>
+            <div class="form-field">
+              <label>Hubspot Link</label>
+              <input type="url" id="f-hubspot" maxlength="500" placeholder="https://...">
+            </div>
+            <div class="form-field">
+              <label>Current Status<span class="req">*</span></label>
+              <select id="f-status" required>
+                <option value="">— Select —</option>
+                <option>Open / In Progress</option>
+                <option>Closed / Won</option>
+                <option>Closed / Lost</option>
+                <option>Closed / Consultation</option>
+                <option>On-Hold</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Type of Engagement</label>
+              <select id="f-type">
+                <option value="">— Select —</option>
+                <option>Sales New Logo</option>
+                <option>Sales Organic</option>
+                <option>Replacement</option>
+                <option>AM Consultation</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Number of New Seats</label>
+              <input type="number" id="f-newseats" min="0" step="1">
+            </div>
+            <div class="form-field">
+              <label>Number of Replacement Seats</label>
+              <input type="number" id="f-repseats" min="0" step="1">
+            </div>
+            <div class="form-field">
+              <label>SME Customer Calls</label>
+              <input type="number" id="f-sme" min="0" step="1">
+            </div>
+            <div class="form-field">
+              <label>Candidate Paper Sourcing</label>
+              <input type="number" id="f-paper" min="0" step="1">
+            </div>
+            <div class="form-field">
+              <label>Candidate Interviews</label>
+              <input type="number" id="f-cands" min="0" step="1">
+            </div>
+            <div class="form-field">
+              <label>Customer Candidate Interviews</label>
+              <input type="number" id="f-custcands" min="0" step="1">
+            </div>
+            <div class="form-field">
+              <label>Consulting Engagement</label>
+              <select id="f-consulting">
+                <option value="">—</option>
+                <option>Free</option>
+                <option>Paid</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Set Client Team Metrics / KPIs</label>
+              <input type="number" id="f-kpis" min="0" step="1">
+            </div>
+            <div class="form-field">
+              <label>Client MyStaff Tutorial / Onboarding</label>
+              <input type="number" id="f-mystaff" min="0" step="1">
+            </div>
+            <div class="form-field full">
+              <label>Closed Lost Reasons</label>
+              <select id="f-lost-reason">
+                <option value="">—</option>
+                <option>Won Business</option>
+                <option>Lost Business</option>
+                <option>In Progress</option>
+                <option>Client is BPO Shopping</option>
+                <option>Skill Set Unavailable in Local Market</option>
+                <option>Process Delays in Recruitment</option>
+                <option>Budget Misalignment</option>
+                <option>Unrealistic Skillset Expectations</option>
+                <option>Extended Client Decision-Making</option>
+                <option>Client is Talent Shopping</option>
+              </select>
+            </div>
+            <div class="form-field full">
+              <label>COE Remarks</label>
+              <textarea id="f-coe" maxlength="2000" placeholder="Optional notes"></textarea>
+            </div>
+            <div class="full btn-row">
+              <button type="submit" class="btn btn-primary" id="opp-form-submit">
+                <svg class="i" viewBox="0 0 24 24"><use href="#i-check"/></svg>Save
+              </button>
+              <button type="button" class="btn" id="opp-form-cancel">Cancel</button>
+              <span id="opp-form-status" class="muted mono" style="margin-left:auto"></span>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- USERS (admin) -->
+    <section id="page-users" class="page page-body" style="display:none">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Users</div>
+          <div class="card-sub" id="users-count">0 users</div>
+        </div>
+        <div class="table-wrap">
+          <table class="opps">
+            <thead><tr>
+              <th>Email</th><th>Full Name</th><th>Role</th><th>SP Attribution</th><th>Created</th>
+            </tr></thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+/* ========================================================
+   CONFIG
+   ======================================================== */
+const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
+const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
+const APP_VERSION   = "v1 r1";
+
+const SP_LIST = ["Marcial","Mimi","Ariel","Archie","Madee","Reo","Rodel","Jie"];
+
+/* ========================================================
+   STATE
+   ======================================================== */
+let currentUser = null;          // { id, email, full_name, role, sp_name }
+let allOpps     = [];            // full table cache
+let allUsers    = [];
+let editingId   = null;          // when set, form is in EDIT mode
+let charts      = {};            // chart.js instances by id
+
+/* ========================================================
+   UTIL
+   ======================================================== */
+const $ = (id) => document.getElementById(id);
+const escapeHtml = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function sha256Hex(s){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function fmtDate(d){
+  if (!d) return "";
+  const dt = new Date(d);
+  if (isNaN(dt)) return d;
+  return dt.toLocaleDateString('en-AU', {day:'2-digit',month:'short',year:'numeric'});
+}
+function num(v){ return (v===null||v===undefined||v==='') ? 0 : Number(v) }
+
+function toast(msg, kind='info'){
+  const w = $('toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.textContent = msg;
+  w.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),250) }, 3000);
+}
+
+async function sb(method, path, body, prefer){
+  const url = SUPABASE_URL + "/rest/v1/" + path;
+  const headers = {
+    "apikey": SUPABASE_ANON,
+    "Authorization": "Bearer " + SUPABASE_ANON,
+    "Content-Type": "application/json",
+  };
+  if (prefer) headers["Prefer"] = prefer;
+  const resp = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`Supabase ${method} ${path}: ${resp.status} ${txt}`);
+  }
+  if (resp.status === 204) return null;
+  const t = await resp.text();
+  return t ? JSON.parse(t) : null;
+}
+
+/* ========================================================
+   AUTH
+   ======================================================== */
+async function login(email, password){
+  email = email.trim().toLowerCase();
+  const hash = await sha256Hex(password);
+  const rows = await sb("GET", `sp_users?email=eq.${encodeURIComponent(email)}&select=*`);
+  if (!rows || rows.length === 0) throw new Error("Invalid email or password.");
+  const u = rows[0];
+  if (u.password_hash !== hash) throw new Error("Invalid email or password.");
+  currentUser = u;
+  sessionStorage.setItem('sp_user', JSON.stringify(u));
+}
+
+function logout(){
+  currentUser = null;
+  sessionStorage.removeItem('sp_user');
+  Object.values(charts).forEach(c => c?.destroy?.());
+  charts = {};
+  $('app').style.display = 'none';
+  $('login-screen').style.display = 'flex';
+  $('login-form').reset();
+  $('login-error').style.display = 'none';
+}
+
+function tryRestoreSession(){
+  const raw = sessionStorage.getItem('sp_user');
+  if (!raw) return false;
+  try { currentUser = JSON.parse(raw); return !!currentUser?.id } catch { return false }
+}
+
+/* ========================================================
+   DATA
+   ======================================================== */
+async function loadData(){
+  const oppsP  = sb("GET", "sp_opportunities?select=*&order=engagement_start_date.desc.nullslast,created_at.desc&limit=10000");
+  const usersP = currentUser.role === 'admin' ? sb("GET", "sp_users?select=*&order=created_at.asc") : Promise.resolve([currentUser]);
+  const [opps, users] = await Promise.all([oppsP, usersP]);
+  allOpps  = opps  || [];
+  allUsers = users || [];
+  $('rail-opp-count').textContent = visibleOpps().length.toLocaleString();
+}
+
+function visibleOpps(){
+  if (currentUser.role === 'admin') return allOpps;
+  if (!currentUser.sp_name) return [];
+  return allOpps.filter(o => (o.sp || '').trim() === currentUser.sp_name);
+}
+
+async function createOpp(payload){
+  payload.created_by = currentUser.id;
+  payload.updated_by = currentUser.id;
+  const inserted = await sb("POST", "sp_opportunities", [payload], "return=representation");
+  allOpps.unshift(inserted[0]);
+  $('rail-opp-count').textContent = visibleOpps().length.toLocaleString();
+  return inserted[0];
+}
+
+async function updateOpp(id, payload){
+  payload.updated_by = currentUser.id;
+  const updated = await sb("PATCH", `sp_opportunities?id=eq.${id}`, payload, "return=representation");
+  const idx = allOpps.findIndex(o => o.id === id);
+  if (idx !== -1) allOpps[idx] = updated[0];
+  return updated[0];
+}
+
+async function deleteOpp(id){
+  await sb("DELETE", `sp_opportunities?id=eq.${id}`);
+  allOpps = allOpps.filter(o => o.id !== id);
+  $('rail-opp-count').textContent = visibleOpps().length.toLocaleString();
+}
+
+/* ========================================================
+   ROUTING / RAIL
+   ======================================================== */
+function showPage(name){
+  ['dashboard','opportunities','new-opp','users'].forEach(p => {
+    $(`page-${p}`).style.display = (p === name) ? 'flex' : 'none';
+  });
+  document.querySelectorAll('.rail-item').forEach(i => i.classList.toggle('active', i.dataset.page === name));
+  const titles = {'dashboard':'Dashboard','opportunities':'Opportunities','new-opp': editingId ? 'Edit Opportunity' : 'New Opportunity','users':'Users'};
+  $('topbar-title').textContent = titles[name] || '';
+  if (name === 'dashboard')      renderDashboard();
+  if (name === 'opportunities')  renderOppsPage();
+  if (name === 'new-opp')        prepareForm();
+  if (name === 'users')          renderUsersPage();
+}
+
+/* ========================================================
+   FILTERS — DASHBOARD
+   ======================================================== */
+function populateFilters(){
+  // SP dropdown — admins see "All" + every SP; users locked to themselves
+  const dashSp = $('dash-sp');
+  const oppSp  = $('opp-sp');
+  dashSp.innerHTML = ''; oppSp.innerHTML = '';
+  if (currentUser.role === 'admin') {
+    dashSp.innerHTML += `<option value="">All Success Pilots</option>`;
+    oppSp.innerHTML  += `<option value="">All Success Pilots</option>`;
+    SP_LIST.forEach(sp => {
+      dashSp.innerHTML += `<option value="${sp}">${sp}</option>`;
+      oppSp.innerHTML  += `<option value="${sp}">${sp}</option>`;
+    });
+  } else {
+    const sp = currentUser.sp_name || '';
+    dashSp.innerHTML = `<option value="${sp}">${sp}</option>`;
+    oppSp.innerHTML  = `<option value="${sp}">${sp}</option>`;
+    dashSp.disabled = true; oppSp.disabled = true;
+  }
+
+  // Year dropdown — derive from all visible opps
+  const years = [...new Set(visibleOpps().map(o => (o.engagement_start_date||'').slice(0,4)).filter(Boolean))].sort().reverse();
+  const dashYear = $('dash-year');
+  const oppYear  = $('opp-year');
+  dashYear.innerHTML = `<option value="">All years</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  oppYear.innerHTML  = `<option value="">All years</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+  // SP form dropdown
+  const fSp = $('f-sp');
+  fSp.innerHTML = '<option value="">— Select —</option>';
+  if (currentUser.role === 'admin') {
+    SP_LIST.forEach(sp => fSp.innerHTML += `<option value="${sp}">${sp}</option>`);
+  } else {
+    fSp.innerHTML += `<option value="${currentUser.sp_name}">${currentUser.sp_name}</option>`;
+  }
+}
+
+function getDashFilters(){
+  return {
+    sp: $('dash-sp').value,
+    year: $('dash-year').value,
+    month: $('dash-month').value,
+    status: $('dash-status').value,
+  };
+}
+
+function applyDashFilters(rows, f){
+  return rows.filter(o => {
+    if (f.sp && (o.sp||'').trim() !== f.sp) return false;
+    if (f.status && o.current_status !== f.status) return false;
+    const d = o.engagement_start_date;
+    if (f.year && (d||'').slice(0,4) !== f.year) return false;
+    if (f.month && d) {
+      const m = parseInt(d.slice(5,7),10);
+      if (m !== parseInt(f.month,10)) return false;
+    }
+    return true;
+  });
+}
+
+/* ========================================================
+   DASHBOARD RENDER
+   ======================================================== */
+function renderDashboard(){
+  const f = getDashFilters();
+  const rows = applyDashFilters(visibleOpps(), f);
+
+  // KPIs
+  $('kpi-client').textContent = rows.length.toLocaleString();
+  const totalSeats = rows.reduce((a,r) => a + num(r.number_of_new_seats), 0);
+  $('kpi-seats').textContent = totalSeats.toLocaleString();
+  const won = rows.filter(r => r.current_status === 'Closed / Won').length;
+  $('kpi-won').textContent = won.toLocaleString();
+  const lost = rows.filter(r => r.current_status === 'Closed / Lost').length;
+  $('kpi-lost').textContent = lost > 0 ? lost.toLocaleString() : '– –';
+  const rep = rows.filter(r => r.type_of_engagement === 'Replacement').length;
+  $('kpi-rep').textContent = rep.toLocaleString();
+
+  // Pies
+  const TYPES = ['Sales New Logo','Sales Organic','Replacement','AM Consultation'];
+  const TYPE_COLORS = ['#3c6ef5','#22d3ee','#f59e0b','#a855f7'];
+  const STATUS_COLORS = { 'Open / In Progress':'#3c6ef5','Closed / Won':'#10b981','Closed / Lost':'#ef4444','Closed / Consultation':'#a855f7','On-Hold':'#f59e0b' };
+
+  const clientCounts = TYPES.map(t => rows.filter(r => r.type_of_engagement === t).length);
+  drawPie('ch-client', TYPES, clientCounts, TYPE_COLORS);
+
+  // Total Seats: only types that produce seats (exclude AM Consultation)
+  const SEATTYPES = ['Sales New Logo','Sales Organic','Replacement'];
+  const SEATCOLS  = ['#3c6ef5','#22d3ee','#f59e0b'];
+  const seatCounts = SEATTYPES.map(t => rows.filter(r => r.type_of_engagement === t).reduce((a,r)=>a+num(r.number_of_new_seats),0));
+  drawPie('ch-seats', SEATTYPES, seatCounts, SEATCOLS);
+
+  // Closed Won breakdown by type
+  const wonRows = rows.filter(r => r.current_status === 'Closed / Won');
+  const wonCounts = TYPES.map(t => wonRows.filter(r => r.type_of_engagement === t).length);
+  drawPie('ch-won', TYPES, wonCounts, TYPE_COLORS);
+
+  // Progression — month-by-month within selected year (or last 12 months if no year)
+  drawProgression(rows, f);
+
+  // Engagement Status
+  const STATUSES = ['Open / In Progress','Closed / Won','Closed / Lost','Closed / Consultation','On-Hold'];
+  const statusCounts = STATUSES.map(s => rows.filter(r => r.current_status === s).length);
+  drawHBar('ch-status', STATUSES, statusCounts, STATUSES.map(s => STATUS_COLORS[s]));
+
+  // Opps table at bottom
+  $('dash-opps-count').textContent = `${rows.length.toLocaleString()} rows`;
+  $('dash-opps-tbody').innerHTML = rows.slice(0, 200).map(r => `
+    <tr>
+      <td><b>${escapeHtml(r.sp||'')}</b></td>
+      <td>${escapeHtml(r.client_name||'')}</td>
+      <td>${escapeHtml(r.describe_opportunity||'')}</td>
+      <td>${escapeHtml(r.bdm_am_name||'')}</td>
+      <td>${typeTag(r.type_of_engagement)}</td>
+      <td>${statusTag(r.current_status)}</td>
+      <td class="mono">${fmtDate(r.engagement_start_date)}</td>
+      <td class="mono">${r.number_of_new_seats ?? ''}</td>
+      <td class="mono">${r.number_of_replacement_seats ?? ''}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="9" class="empty-state">No matching opportunities.</td></tr>';
+}
+
+function drawPie(canvasId, labels, data, colors){
+  charts[canvasId]?.destroy?.();
+  const ctx = $(canvasId).getContext('2d');
+  const total = data.reduce((a,b)=>a+b,0);
+  charts[canvasId] = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data, backgroundColor:colors, borderWidth:1, borderColor:'#fff' }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:{family:'Inter',size:11.5}, boxWidth:10, padding:10 } },
+        tooltip:{ callbacks:{ label:(c)=> `${c.label}: ${c.parsed} (${total?((c.parsed/total)*100).toFixed(1):'0'}%)` } }
+      },
+      cutout:'45%',
+    }
+  });
+}
+
+function drawHBar(canvasId, labels, data, colors){
+  charts[canvasId]?.destroy?.();
+  const ctx = $(canvasId).getContext('2d');
+  charts[canvasId] = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ data, backgroundColor:colors, borderRadius:4 }] },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ x:{ beginAtZero:true, ticks:{ font:{family:'JetBrains Mono',size:11} } }, y:{ ticks:{ font:{family:'Inter',size:11.5} } } }
+    }
+  });
+}
+
+function drawProgression(rows, f){
+  const id = 'ch-progression';
+  charts[id]?.destroy?.();
+  const ctx = $(id).getContext('2d');
+
+  // If a year is selected, show 12 months of that year. Otherwise: show year totals.
+  let labels, data;
+  if (f.year) {
+    labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    data = Array(12).fill(0);
+    rows.forEach(r => {
+      const d = r.engagement_start_date;
+      if (!d) return;
+      if (d.slice(0,4) !== f.year) return;
+      const m = parseInt(d.slice(5,7),10);
+      if (m>=1 && m<=12) data[m-1]++;
+    });
+  } else {
+    const years = {};
+    rows.forEach(r => {
+      const y = (r.engagement_start_date||'').slice(0,4);
+      if (!y) return;
+      years[y] = (years[y]||0)+1;
+    });
+    labels = Object.keys(years).sort();
+    data = labels.map(y => years[y]);
+  }
+  charts[id] = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ data, backgroundColor:'#3c6ef5', borderRadius:4 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => `Client Count: ${c.parsed.y}` } } },
+      scales:{ x:{ ticks:{ font:{family:'Inter',size:11} } }, y:{ beginAtZero:true, ticks:{ font:{family:'JetBrains Mono',size:11} } } }
+    }
+  });
+}
+
+/* ========================================================
+   OPPORTUNITIES PAGE
+   ======================================================== */
+function renderOppsPage(){
+  const search = ($('opp-search').value || '').trim().toLowerCase();
+  const sp     = $('opp-sp').value;
+  const status = $('opp-status').value;
+  const type   = $('opp-type').value;
+  const year   = $('opp-year').value;
+
+  let rows = visibleOpps();
+  if (sp)     rows = rows.filter(r => (r.sp||'').trim() === sp);
+  if (status) rows = rows.filter(r => r.current_status === status);
+  if (type)   rows = rows.filter(r => r.type_of_engagement === type);
+  if (year)   rows = rows.filter(r => (r.engagement_start_date||'').slice(0,4) === year);
+  if (search) rows = rows.filter(r =>
+    (r.client_name||'').toLowerCase().includes(search)
+    || (r.describe_opportunity||'').toLowerCase().includes(search)
+    || (r.jrid_uberticket||'').toLowerCase().includes(search)
+    || (r.bdm_am_name||'').toLowerCase().includes(search)
+  );
+
+  $('opp-count').textContent = `${rows.length.toLocaleString()} rows`;
+  $('opp-tbody').innerHTML = rows.slice(0,500).map(r => `
+    <tr data-id="${r.id}">
+      <td><b>${escapeHtml(r.sp||'')}</b></td>
+      <td>${escapeHtml(r.client_name||'')}</td>
+      <td title="${escapeHtml(r.describe_opportunity||'')}">${escapeHtml(r.describe_opportunity||'')}</td>
+      <td class="mono">${escapeHtml(r.jrid_uberticket||'')}</td>
+      <td>${escapeHtml(r.bdm_am_name||'')}</td>
+      <td>${typeTag(r.type_of_engagement)}</td>
+      <td>${statusTag(r.current_status)}</td>
+      <td class="mono">${fmtDate(r.engagement_start_date)}</td>
+      <td class="mono">${r.number_of_new_seats ?? ''}</td>
+      <td class="mono">${r.number_of_replacement_seats ?? ''}</td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-icon" data-act="edit"   title="Edit"  ><svg class="i" viewBox="0 0 24 24"><use href="#i-edit"/></svg></button>
+          <button class="btn-icon danger" data-act="delete" title="Delete"><svg class="i" viewBox="0 0 24 24"><use href="#i-trash"/></svg></button>
+        </div>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="11" class="empty-state">No matching opportunities.</td></tr>';
+}
+
+function statusTag(s){
+  if (!s) return '';
+  const cls = s==='Closed / Won' ? 'tag-won' :
+              s==='Closed / Lost' ? 'tag-lost' :
+              s==='Closed / Consultation' ? 'tag-cons' :
+              s==='On-Hold' ? 'tag-hold' : 'tag-open';
+  return `<span class="tag ${cls}">${escapeHtml(s)}</span>`;
+}
+function typeTag(t){
+  if (!t) return '';
+  const cls = t==='Sales New Logo' ? 'tag-type-newlogo' :
+              t==='Sales Organic' ? 'tag-type-organic' :
+              t==='Replacement' ? 'tag-type-replacement' :
+              t==='AM Consultation' ? 'tag-type-amcons' : '';
+  return `<span class="tag ${cls}">${escapeHtml(t)}</span>`;
+}
+
+/* ========================================================
+   FORM
+   ======================================================== */
+const FORM_FIELDS = {
+  'f-sp':'sp','f-date':'engagement_start_date','f-describe':'describe_opportunity',
+  'f-client':'client_name','f-bdm':'bdm_am_name','f-jrid':'jrid_uberticket','f-hubspot':'hubspot_link',
+  'f-status':'current_status','f-type':'type_of_engagement',
+  'f-newseats':'number_of_new_seats','f-repseats':'number_of_replacement_seats',
+  'f-sme':'sme_customer_calls','f-paper':'candidate_paper_sourcing','f-cands':'candidate_interviews',
+  'f-custcands':'customer_candidate_interviews','f-consulting':'consulting_engagement',
+  'f-kpis':'set_client_team_metrics_kpis','f-mystaff':'client_mystaff_tutorial_onboarding',
+  'f-lost-reason':'closed_lost_reasons','f-coe':'coe_remarks',
+};
+
+function prepareForm(){
+  const isEdit = !!editingId;
+  $('opp-form-title').textContent = isEdit ? 'Edit Opportunity' : 'New Opportunity';
+  $('opp-form-sub').textContent   = isEdit ? `Editing record ${editingId.slice(0,8)}…` : 'Add a new sales / AM engagement';
+  $('topbar-title').textContent   = $('opp-form-title').textContent;
+
+  if (!isEdit) {
+    $('opp-form').reset();
+    $('f-id').value = '';
+    if (currentUser.role !== 'admin') $('f-sp').value = currentUser.sp_name || '';
+    $('f-date').valueAsDate = new Date();
+  } else {
+    const r = allOpps.find(o => o.id === editingId);
+    if (!r) { editingId = null; prepareForm(); return; }
+    $('f-id').value = r.id;
+    Object.entries(FORM_FIELDS).forEach(([dom, col]) => {
+      const v = r[col];
+      $(dom).value = v === null || v === undefined ? '' : v;
+    });
+  }
+}
+
+async function submitForm(e){
+  e.preventDefault();
+  const submitBtn = $('opp-form-submit');
+  submitBtn.disabled = true;
+  $('opp-form-status').textContent = 'Saving…';
+  try {
+    const payload = {};
+    Object.entries(FORM_FIELDS).forEach(([dom, col]) => {
+      let v = $(dom).value;
+      if (v === '') v = null;
+      if (v !== null && ['number_of_new_seats','number_of_replacement_seats','sme_customer_calls',
+        'candidate_paper_sourcing','candidate_interviews','customer_candidate_interviews',
+        'set_client_team_metrics_kpis','client_mystaff_tutorial_onboarding'].includes(col)) {
+        v = Number(v);
+      }
+      payload[col] = v;
+    });
+
+    // permission check: non-admins can only edit/create their own SP rows
+    if (currentUser.role !== 'admin' && payload.sp !== currentUser.sp_name) {
+      throw new Error("You can only manage opportunities under your own SP attribution.");
+    }
+
+    if (editingId) {
+      await updateOpp(editingId, payload);
+      toast('Opportunity updated.', 'success');
+    } else {
+      await createOpp(payload);
+      toast('Opportunity created.', 'success');
+    }
+    editingId = null;
+    showPage('opportunities');
+  } catch (err) {
+    console.error(err);
+    toast(err.message || 'Save failed.', 'error');
+    $('opp-form-status').textContent = '';
+  } finally {
+    submitBtn.disabled = false;
+    $('opp-form-status').textContent = '';
+  }
+}
+
+/* ========================================================
+   USERS PAGE
+   ======================================================== */
+function renderUsersPage(){
+  $('users-count').textContent = `${allUsers.length} users`;
+  $('users-tbody').innerHTML = allUsers.map(u => `
+    <tr>
+      <td class="mono">${escapeHtml(u.email)}</td>
+      <td>${escapeHtml(u.full_name)}</td>
+      <td>${u.role === 'admin' ? '<span class="tag tag-cons">admin</span>' : '<span class="tag tag-open">user</span>'}</td>
+      <td>${escapeHtml(u.sp_name || '—')}</td>
+      <td class="mono">${fmtDate(u.created_at)}</td>
+    </tr>
+  `).join('');
+}
+
+/* ========================================================
+   INIT / EVENT WIRING
+   ======================================================== */
+async function bootApp(){
+  // Header user
+  const initials = (currentUser.full_name || currentUser.email).trim().split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
+  $('rail-avatar').textContent = initials || '?';
+  $('rail-uname').textContent  = currentUser.full_name;
+  $('rail-urole').textContent  = currentUser.role + (currentUser.sp_name ? ' · ' + currentUser.sp_name : '');
+
+  if (currentUser.role === 'admin') {
+    $('rail-admin-label').style.display = 'block';
+    $('rail-users-item').style.display = 'flex';
+  }
+
+  $('login-screen').style.display = 'none';
+  $('app').style.display = 'grid';
+
+  try {
+    await loadData();
+    populateFilters();
+    showPage('dashboard');
+  } catch (err) {
+    console.error(err);
+    $('rail-dot').classList.add('off');
+    $('rail-dbtxt').textContent = 'Disconnected';
+    toast('Failed to load data: ' + err.message, 'error');
+  }
+}
+
+function bindEvents(){
+  // Login
+  $('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('login-btn');
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    $('login-error').style.display = 'none';
+    try {
+      await login($('login-email').value, $('login-password').value);
+      await bootApp();
+    } catch (err) {
+      $('login-error').textContent = err.message;
+      $('login-error').style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Sign in';
+    }
+  });
+
+  // Rail nav
+  document.querySelectorAll('.rail-item[data-page]').forEach(it => {
+    it.addEventListener('click', () => { editingId = null; showPage(it.dataset.page) });
+  });
+  $('rail-signout').addEventListener('click', logout);
+
+  // Dashboard filters
+  ['dash-sp','dash-year','dash-month','dash-status'].forEach(id =>
+    $(id).addEventListener('change', renderDashboard));
+  $('dash-reset').addEventListener('click', () => {
+    if (currentUser.role === 'admin') $('dash-sp').value = '';
+    $('dash-year').value = '';
+    $('dash-month').value = '';
+    $('dash-status').value = '';
+    renderDashboard();
+  });
+
+  // Opps filters
+  ['opp-search','opp-sp','opp-status','opp-type','opp-year'].forEach(id =>
+    $(id).addEventListener('input', renderOppsPage));
+  $('opp-new').addEventListener('click', () => { editingId = null; showPage('new-opp') });
+
+  // Opps table actions (delegated)
+  $('opp-tbody').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const id = btn.closest('tr').dataset.id;
+    const row = allOpps.find(o => o.id === id);
+    if (!row) return;
+    if (currentUser.role !== 'admin' && (row.sp || '').trim() !== currentUser.sp_name) {
+      toast('You can only act on your own SP rows.', 'error'); return;
+    }
+    if (btn.dataset.act === 'edit') {
+      editingId = id; showPage('new-opp');
+    } else if (btn.dataset.act === 'delete') {
+      if (!confirm(`Delete this opportunity?\n\n${row.client_name || ''} — ${row.describe_opportunity || ''}`)) return;
+      try { await deleteOpp(id); toast('Opportunity deleted.', 'success'); renderOppsPage(); renderDashboard(); }
+      catch (err) { toast('Delete failed: ' + err.message, 'error'); }
+    }
+  });
+
+  // Form
+  $('opp-form').addEventListener('submit', submitForm);
+  $('opp-form-cancel').addEventListener('click', () => { editingId = null; showPage('opportunities') });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  $('login-version').textContent = `SP Tracker ${APP_VERSION}`;
+  bindEvents();
+  if (tryRestoreSession()) {
+    bootApp();
+  }
+});
+</script>
+</body>
+</html>
