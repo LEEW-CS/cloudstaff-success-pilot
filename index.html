@@ -355,7 +355,7 @@ table.opps tr:hover td{ background:#fafbfd }
       </div>
       <button type="submit" id="login-btn" class="login-btn">Sign in</button>
     </form>
-    <div class="login-footer" id="login-version">SP Tracker v1 r3</div>
+    <div class="login-footer" id="login-version">SP Tracker v1 r4</div>
   </div>
 </div>
 
@@ -395,7 +395,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r3</div>
+      <div class="rail-version">v1 r4</div>
     </div>
   </aside>
 
@@ -740,10 +740,8 @@ table.opps tr:hover td{ background:#fafbfd }
         </div>
         <div class="form-field">
           <label>SP Attribution</label>
-          <select id="u-sp">
-            <option value="">— None (sees all if admin) —</option>
-          </select>
-          <div class="form-hint">Maps the user to the <code>sp</code> column on opportunities.</div>
+          <input type="text" id="u-sp" disabled style="background:var(--ink-50);color:var(--ink-600)" placeholder="Auto-set from Full Name">
+          <div class="form-hint">Auto-set: <b>users</b> → their full name; <b>admins</b> → none (see all).</div>
         </div>
         <div class="form-field full" id="u-pw-wrap">
           <label>Password<span class="req">*</span></label>
@@ -806,9 +804,13 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r3";
+const APP_VERSION   = "v1 r4";
 
-const SP_LIST = ["Marcial","Mimi","Ariel","Archie","Madee","Reo","Rodel","Jie"];
+// Legacy SP attribution values from imported historical data — these are not
+// user accounts (people no longer in role) but still attributed to old engagements.
+// Active users with role='user' contribute their full_name to SP_LIST automatically.
+const SP_LEGACY = ["Madee","Reo","Rodel","Jie"];
+let SP_LIST = [...SP_LEGACY];   // recomputed in computeSpList() once allUsers is loaded
 
 /* ========================================================
    STATE
@@ -899,12 +901,51 @@ function tryRestoreSession(){
    DATA
    ======================================================== */
 async function loadData(){
-  const oppsP  = sb("GET", "sp_opportunities?select=*&order=engagement_start_date.desc.nullslast,created_at.desc&limit=10000");
+  // Supabase REST has a hard 1000-row default cap; we page through using Range headers.
   const usersP = currentUser.role === 'admin' ? sb("GET", "sp_users?select=*&order=created_at.asc") : Promise.resolve([currentUser]);
-  const [opps, users] = await Promise.all([oppsP, usersP]);
+  const [opps, users] = await Promise.all([loadAllOpps(), usersP]);
   allOpps  = opps  || [];
   allUsers = users || [];
+  computeSpList();
   $('rail-opp-count').textContent = visibleOpps().length.toLocaleString();
+}
+
+async function loadAllOpps(){
+  const PAGE = 1000;
+  const base = "sp_opportunities?select=*&order=engagement_start_date.desc.nullslast,created_at.desc";
+  let out = [], from = 0;
+  while (true) {
+    const to = from + PAGE - 1;
+    const url = `${SUPABASE_URL}/rest/v1/${base}`;
+    const resp = await fetch(url, {
+      headers: {
+        "apikey": SUPABASE_ANON,
+        "Authorization": "Bearer " + SUPABASE_ANON,
+        "Range-Unit": "items",
+        "Range": `${from}-${to}`,
+        "Prefer": "count=exact"
+      }
+    });
+    if (!resp.ok) throw new Error(`Load opps failed: ${resp.status} ${await resp.text()}`);
+    const chunk = await resp.json();
+    out.push(...chunk);
+    const cr = resp.headers.get('content-range') || '';
+    const total = parseInt(cr.split('/')[1] || '0', 10);
+    if (out.length >= total || chunk.length === 0) break;
+    from += PAGE;
+    if (from > 50000) break; // hard safety bound
+  }
+  return out;
+}
+
+// Build SP_LIST from active users (role='user') + legacy attributions still
+// present in opportunities but not matching any user.
+function computeSpList(){
+  const fromUsers = allUsers.filter(u => u.role === 'user' && u.sp_name).map(u => u.sp_name);
+  const fromOpps  = [...new Set(allOpps.map(o => (o.sp||'').trim()).filter(Boolean))];
+  const userSet   = new Set(fromUsers);
+  const orphans   = fromOpps.filter(sp => !userSet.has(sp));
+  SP_LIST = [...new Set([...fromUsers, ...orphans])].sort((a,b) => a.localeCompare(b));
 }
 
 function visibleOpps(){
@@ -1328,11 +1369,8 @@ function openUserModal(user){
   $('u-name').value   = user?.full_name || '';
   $('u-role').value   = user?.role || 'user';
 
-  // Populate SP dropdown
-  const usp = $('u-sp');
-  usp.innerHTML = '<option value="">— None —</option>' +
-    SP_LIST.map(sp => `<option value="${sp}" ${user?.sp_name===sp?'selected':''}>${sp}</option>`).join('');
-  if (user?.sp_name) usp.value = user.sp_name;
+  // SP attribution = full_name when user role, none when admin (auto-derived)
+  syncSpAttributionField();
 
   // Password field — required on create, optional on edit (use Reset PW for edits)
   const pwWrap = $('u-pw-wrap');
@@ -1352,6 +1390,13 @@ function openUserModal(user){
 function closeUserModal(){
   $('user-modal').style.display = 'none';
   editingUserId = null;
+}
+
+// Recompute SP attribution preview based on current Full Name + Role inputs.
+function syncSpAttributionField(){
+  const role = $('u-role').value;
+  const name = $('u-name').value.trim();
+  $('u-sp').value = (role === 'user' && name) ? name : '';
 }
 
 function pwComplexityError(pw){
@@ -1375,7 +1420,8 @@ async function submitUserForm(e){
     const email   = $('u-email').value.trim().toLowerCase();
     const name    = $('u-name').value.trim();
     const role    = $('u-role').value;
-    const sp_name = $('u-sp').value || null;
+    // SP attribution is auto-set: users get their full name, admins get none.
+    const sp_name = (role === 'user' && name) ? name : null;
 
     if (!email || !name) throw new Error('Email and full name are required.');
     if (!/^.+@.+\..+$/.test(email)) throw new Error('Invalid email address.');
@@ -1407,6 +1453,8 @@ async function submitUserForm(e){
       toast('User created.', 'success');
     }
     await reloadUsers();
+    computeSpList();
+    populateFilters();
     renderUsersPage();
     closeUserModal();
   } catch (err) {
@@ -1425,6 +1473,8 @@ async function deleteUser(u){
     await sb("DELETE", `sp_users?id=eq.${u.id}`);
     toast(`User ${u.email} deleted.`, 'success');
     await reloadUsers();
+    computeSpList();
+    populateFilters();
     renderUsersPage();
   } catch (err) {
     toast('Delete failed: ' + err.message, 'error');
@@ -1592,6 +1642,8 @@ function bindEvents(){
   $('user-form-submit').addEventListener('click', submitUserForm);
   $('user-form').addEventListener('submit', submitUserForm);
   $('user-modal').addEventListener('click', (e) => { if (e.target.id === 'user-modal') closeUserModal(); });
+  $('u-name').addEventListener('input', syncSpAttributionField);
+  $('u-role').addEventListener('change', syncSpAttributionField);
 
   // Reset PW modal
   $('pw-modal-close').addEventListener('click', closeResetPasswordModal);
