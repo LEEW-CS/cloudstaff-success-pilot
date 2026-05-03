@@ -474,13 +474,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r12 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r13 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r12 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r13 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -543,7 +543,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r12</div>
+      <div class="rail-version">v1 r13</div>
     </div>
   </aside>
 
@@ -632,15 +632,15 @@ table.opps tr:hover td{ background:#fafbfd }
         <div class="card-head">
           <div>
             <div class="card-title" style="font-family:var(--font-serif, var(--font-sans));font-size:18px">Customer Movement</div>
-            <div class="muted" style="font-size:12.5px;margin-top:2px">Net seats from new logos, churn, and like-for-like replacements</div>
+            <div class="muted" style="font-size:12.5px;margin-top:2px">Closed Won opportunities minus Closed Lost, with replacements shown separately</div>
           </div>
           <div class="card-sub" id="dash-wf-sub" style="margin-left:auto"></div>
         </div>
         <div class="card-body">
           <div id="wf-chart"></div>
           <div class="wf-legend">
-            <div class="wf-legend-item"><span class="wf-swatch" style="background:#1a4d3a"></span>New logos won</div>
-            <div class="wf-legend-item"><span class="wf-swatch" style="background:#c44536"></span>Disengaged / lost</div>
+            <div class="wf-legend-item"><span class="wf-swatch" style="background:#1a4d3a"></span>Closed Won</div>
+            <div class="wf-legend-item"><span class="wf-swatch" style="background:#c44536"></span>Closed Lost</div>
             <div class="wf-legend-item"><span class="wf-swatch" style="background:#2c5f8d"></span>Net position</div>
             <div class="wf-legend-item"><span class="wf-swatch wf-swatch-dashed"></span>Replacements (net zero)</div>
           </div>
@@ -979,7 +979,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r12";
+const APP_VERSION   = "v1 r13";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1358,31 +1358,33 @@ function renderDashboard(){
 }
 
 /* ─────────── Customer Movement Waterfall (inline SVG) ───────────
- * Editorial-style waterfall: New Logo gross seats minus Disengaged/Lost = Net,
- * with Replacements rendered below the axis to show that they are net-zero
- * retention activity (offset churn one-for-one).
+ * Counts opportunities (matches the KPI tiles above the chart). Closed Won
+ * is the gross win bar, Closed Lost is subtracted on top of Net, Net is the
+ * Won−Lost differential, and Replacements are rendered below the axis as
+ * net-zero retention activity.
  *
- * Metrics:
- *   newLogo = SUM(number_of_new_seats) for type='Sales New Logo'
- *   lost    = SUM(number_of_new_seats) for type='Sales New Logo' AND status='Closed / Lost'
- *   net     = newLogo - lost
- *   repls   = SUM(number_of_replacement_seats) for type='Replacement'
- *   gross   = newLogo + repls   (total seats that need to be filled)
+ * Metrics (all opportunity COUNTS, matching the KPI tiles):
+ *   closedWon  = COUNT(status='Closed / Won')      — same as the Closed Won tile
+ *   closedLost = COUNT(status='Closed / Lost')     — same as the Closed Lost tile
+ *   net        = closedWon - closedLost            — win/loss differential
+ *   repls      = COUNT(type='Replacement')         — same as the Replacement tile
+ *   totalAdded = closedWon + repls                 — total wins (incl. replacements)
  */
 function drawCustomerMovement(rows){
-  const newLogoRows = rows.filter(r => r.type_of_engagement === 'Sales New Logo');
-  const newLogo = newLogoRows.reduce((a,r) => a + num(r.number_of_new_seats), 0);
-  const lost    = newLogoRows.filter(r => r.current_status === 'Closed / Lost')
-                              .reduce((a,r) => a + num(r.number_of_new_seats), 0);
-  const net     = Math.max(0, newLogo - lost);
-  const repls   = rows.filter(r => r.type_of_engagement === 'Replacement')
-                       .reduce((a,r) => a + num(r.number_of_replacement_seats), 0);
-  const gross   = newLogo + repls;
+  const closedWon  = rows.filter(r => r.current_status === 'Closed / Won').length;
+  const closedLost = rows.filter(r => r.current_status === 'Closed / Lost').length;
+  const net        = Math.max(0, closedWon - closedLost);
+  const repls      = rows.filter(r => r.type_of_engagement === 'Replacement').length;
+  const gross      = closedWon + repls;
+
+  // Local aliases so the rest of the function stays unchanged
+  const newLogo = closedWon;
+  const lost    = closedLost;
 
   // Empty state
   const host = $('wf-chart');
-  if (newLogo === 0 && lost === 0 && repls === 0) {
-    host.innerHTML = `<div class="empty-state">No Sales New Logo or Replacement seats in the current selection.</div>`;
+  if (closedWon === 0 && closedLost === 0 && repls === 0) {
+    host.innerHTML = `<div class="empty-state">No Closed/Won, Closed/Lost, or Replacement opportunities in the current selection.</div>`;
     $('dash-wf-sub').textContent = '';
     return;
   }
@@ -1434,12 +1436,12 @@ function drawCustomerMovement(rows){
       <line class="wf-conn" x1="${X2+BAR_W}" y1="${yBotLost}"    x2="${X3}" y2="${yTopNet}"/>
 
       <rect class="wf-bar-new"  x="${X1}" y="${yTopNewLogo}" width="${BAR_W}" height="${hNewLogo}" rx="2"/>
-      <text class="wf-bar-label ${hNewLogo>=36?'wf-bar-value-light':'wf-bar-value-dark'}" x="${X1+BAR_W/2}" y="${yTopNewLogo+22}">New Logo</text>
+      <text class="wf-bar-label ${hNewLogo>=36?'wf-bar-value-light':'wf-bar-value-dark'}" x="${X1+BAR_W/2}" y="${yTopNewLogo+22}">Closed Won</text>
       <text class="wf-bar-value ${txtClassNewLogo}" x="${X1+BAR_W/2}" y="${txtYNewLogo}">+${fmt(newLogo)}</text>
 
       ${lost > 0 ? `
       <rect class="wf-bar-lost" x="${X2}" y="${yTopLost}" width="${BAR_W}" height="${hLost}" rx="2"/>
-      <text class="wf-bar-label" x="${X2+BAR_W/2}" y="${Math.max(20, yTopLost-10)}">Disengaged (Lost)</text>
+      <text class="wf-bar-label" x="${X2+BAR_W/2}" y="${Math.max(20, yTopLost-10)}">Closed Lost</text>
       <text class="wf-bar-value ${hLost>=30?'wf-bar-value-light':'wf-bar-value-dark'}" x="${X2+BAR_W/2}" y="${hLost>=30 ? yLostBarMid+6 : yBotLost+22}">−${fmt(lost)}</text>
       ` : `<text class="wf-bar-label" x="${X2+BAR_W/2}" y="${AXIS_Y-10}" fill="#999">No losses</text>`}
 
