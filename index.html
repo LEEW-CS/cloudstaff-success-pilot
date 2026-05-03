@@ -414,6 +414,8 @@ table.opps tr:hover td{ background:#fafbfd }
 .wf-bar-value { font-family:var(--font-sans); font-size:18px; font-weight:700; text-anchor:middle }
 .wf-bar-value-light{ fill:#fff }
 .wf-bar-value-dark { fill:#2a2a2a }
+.wf-total-label{ font-family:var(--font-sans); font-size:14px; font-weight:600; fill:#1a1a1a }
+.wf-total-value{ font-family:var(--font-sans); font-size:24px; font-weight:700; fill:#1a4d3a }
 
 .wf-legend{ display:flex; gap:24px; margin-top:24px; padding-top:18px; border-top:1px solid var(--ink-200); flex-wrap:wrap; font-size:12.5px; color:var(--ink-600) }
 .wf-legend-item{ display:flex; align-items:center; gap:8px }
@@ -472,13 +474,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r11 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r12 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r11 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r12 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -541,7 +543,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r11</div>
+      <div class="rail-version">v1 r12</div>
     </div>
   </aside>
 
@@ -647,13 +649,6 @@ table.opps tr:hover td{ background:#fafbfd }
             to the net position. They&rsquo;re tracked separately so you can see retention activity that doesn&rsquo;t
             move the net number.
           </p>
-          <div class="wf-callout">
-            <div class="wf-callout-text">
-              <div class="wf-callout-label" id="wf-callout-label">Total seats required to hit Net target</div>
-              <div class="wf-callout-formula" id="wf-callout-formula"></div>
-            </div>
-            <div class="wf-callout-value" id="wf-callout-value">0</div>
-          </div>
         </div>
       </div>
 
@@ -984,7 +979,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r11";
+const APP_VERSION   = "v1 r12";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1388,9 +1383,6 @@ function drawCustomerMovement(rows){
   const host = $('wf-chart');
   if (newLogo === 0 && lost === 0 && repls === 0) {
     host.innerHTML = `<div class="empty-state">No Sales New Logo or Replacement seats in the current selection.</div>`;
-    $('wf-callout-label').textContent = 'Total seats required';
-    $('wf-callout-formula').innerHTML = '';
-    $('wf-callout-value').textContent = '0';
     $('dash-wf-sub').textContent = '';
     return;
   }
@@ -1428,8 +1420,16 @@ function drawCustomerMovement(rows){
   const txtYNet         = (hNet >= 36)     ? (yTopNet + hNet / 2 + 6) : (yTopNet - 8);
   const yLostBarMid     = yTopLost + hLost / 2;
 
+  // "Total Added" annotation — left of the New Logo bar, vertically aligned
+  // with the middle of the New Logo bar.
+  const totalAddedY = yTopNewLogo + hNewLogo / 2;
+
   const svg = `
     <svg viewBox="0 0 ${VB_W} ${VB_H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Customer Movement waterfall">
+      <!-- Total Added annotation (left of bars) -->
+      <text class="wf-total-label" x="${X1 - 12}" y="${totalAddedY - 6}" text-anchor="end">Total Added:</text>
+      <text class="wf-total-value" x="${X1 - 12}" y="${totalAddedY + 22}" text-anchor="end">${fmt(gross)}</text>
+
       <line class="wf-conn" x1="${X1+BAR_W}" y1="${yTopNewLogo}" x2="${X2}" y2="${yTopLost}"/>
       <line class="wf-conn" x1="${X2+BAR_W}" y1="${yBotLost}"    x2="${X3}" y2="${yTopNet}"/>
 
@@ -1457,12 +1457,6 @@ function drawCustomerMovement(rows){
     </svg>
   `;
   host.innerHTML = svg;
-
-  $('wf-callout-label').textContent = `Total seats required to hit Net target of ${fmt(net)}`;
-  $('wf-callout-formula').innerHTML =
-    `Replacements (${fmt(repls)}) + New Logo (${fmt(newLogo)}) − Disengagements (${fmt(lost)}) = Net (${fmt(net)})<br>` +
-    `Gross seats to fill: ${fmt(repls)} + ${fmt(newLogo)} = <strong>${fmt(gross)}</strong>`;
-  $('wf-callout-value').textContent = fmt(gross);
 
   const f = getDashFilters();
   const bits = [];
