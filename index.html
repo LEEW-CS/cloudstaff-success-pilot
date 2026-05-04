@@ -478,13 +478,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r20 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r21 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r20 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r21 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -547,7 +547,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r20</div>
+      <div class="rail-version">v1 r21</div>
     </div>
   </aside>
 
@@ -1008,7 +1008,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r20";
+const APP_VERSION   = "v1 r21";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1328,7 +1328,7 @@ function renderDashboard(){
   const f = getDashFilters();
   const rows = applyDashFilters(visibleOpps(), f);
 
-  // (KPI tile row was removed in v1 r20 — the waterfalls now carry the
+  // (KPI tile row was removed in v1 r21 — the waterfalls now carry the
   // headline metrics. drawWaterfall computes its own counts.)
 
   // Pies
@@ -1425,33 +1425,31 @@ function drawWaterfall(rows, mode, hostId, subId){
     return;
   }
 
-  // SVG geometry — viewBox widened to fit 6 columns + Total Effort box on right.
-  // New left-to-right order (v1 r20 experiment):
+  // SVG geometry — viewBox 1300, axis at y=320.
+  // New left-to-right order (v1 r21):
   //   1. Open / In Progress (below axis)
   //   2. Closed Won (above) + Replacements (below, seats only)
-  //   3. Closed Lost (above)
-  //   4. Closed Consultation (below)
-  //   5. On Hold (below)
-  //   6. Net (above)
+  //   3. Closed Lost — sits ON TOP of Net (true waterfall step-down)
+  //   4. Net (above) — what remains after Lost peels off
+  //   5. Closed Consultation (below)
+  //   6. On Hold (below)
   const VB_W = 1300, VB_H = 480;
   const AXIS_Y = 320;
   const MAX_UP = 220, MAX_DOWN = 130;
-  const topMax = Math.max(newLogo, lost, net, 1);
+  const topMax = Math.max(newLogo, net + lost, 1);
   const scaleUp = MAX_UP / topMax;
   const downMax = Math.max(repls, cons, onHold, open, 1);
   const scaleDown = Math.min(MAX_DOWN / downMax, scaleUp);
 
   const BAR_W = 110;
-  const X_OPEN = 110;   // 1. Open / In Progress
-  const X_WON  = 280;   // 2. Closed Won (and Replacements stack below)
-  const X_LOST = 450;   // 3. Closed Lost
-  const X_CONS = 620;   // 4. Closed Consultation
-  const X_HOLD = 790;   // 5. On Hold
-  const X_NET  = 960;   // 6. Net
+  const X_OPEN = 110;   // 1. Open / In Progress (below)
+  const X_WON  = 280;   // 2. Won (above) + Replacements (below, seats only)
+  const X_LOST = 450;   // 3. Lost — on top of Net (waterfall drop)
+  const X_NET  = 620;   // 4. Net (above)
+  const X_CONS = 790;   // 5. Consultation (below)
+  const X_HOLD = 960;   // 6. On Hold (below)
   const X_REPL = X_WON; // Replacements (below axis, under Won, seats only)
 
-  // Aliases used by older annotation logic
-  const X1 = X_WON;     // for the Total Added annotation, anchor to Won column
   const hNewLogo = newLogo * scaleUp;
   const hNet     = net * scaleUp;
   const hLost    = lost * scaleUp;
@@ -1461,7 +1459,9 @@ function drawWaterfall(rows, mode, hostId, subId){
   const hOpen    = open * scaleDown;
 
   const yTopNewLogo = AXIS_Y - hNewLogo;
-  const yTopLost    = AXIS_Y - hLost;
+  // Waterfall: Lost sits ON TOP of Net. Top of Lost = top of Won, bottom of Lost = top of Net.
+  const yTopLost    = AXIS_Y - hNewLogo;
+  const yBotLost    = AXIS_Y - hNet;
   const yTopNet     = AXIS_Y - hNet;
   const yReplBot    = AXIS_Y + hRepl;
   const yConsBot    = AXIS_Y + hCons;
@@ -1521,12 +1521,29 @@ function drawWaterfall(rows, mode, hostId, subId){
   const noNetLabel  = `${noPrefix} Net`;
   const noReplLabel = 'No Replacements';
 
+  // Lost-on-top-of-Net helper: places the Lost rect with its top at the Won
+  // bar's top and its bottom at the Net bar's top — the classic waterfall drop.
+  const lostStepBar = (x) => {
+    if (lost === 0) return emptyAbove(x, noLostLabel);
+    const yLostMid = yTopLost + hLost / 2;
+    const valY = hLost >= 30 ? yLostMid + 6 : yBotLost + 22;
+    const valCls = hLost >= 30 ? 'wf-bar-value-light' : 'wf-bar-value-dark';
+    return `
+      <rect class="wf-bar-lost" x="${x}" y="${yTopLost}" width="${BAR_W}" height="${hLost}" rx="2"/>
+      <text class="wf-bar-label" x="${x+BAR_W/2}" y="${Math.max(20, yTopLost-10)}">${lostLabel}</text>
+      <text class="wf-bar-value ${valCls}" x="${x+BAR_W/2}" y="${valY}">−${fmt(lost)}</text>`;
+  };
+
   const svg = `
     <svg viewBox="0 0 ${VB_W} ${VB_H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${isSeats?'Seats':'Clients'} waterfall">
       ${showTotalAdded ? `
       <text class="wf-total-label" x="${X_WON - 12}" y="${totalAddedY - 6}" text-anchor="end">Total Added:</text>
       <text class="wf-total-value" x="${X_WON - 12}" y="${totalAddedY + 22}" text-anchor="end">${fmt(gross)}</text>
       ` : ''}
+
+      <!-- Connector lines that show the waterfall flow Won → Lost → Net -->
+      ${(won > 0 && lost > 0) ? `<line class="wf-conn" x1="${X_WON+BAR_W}" y1="${yTopNewLogo}" x2="${X_LOST}" y2="${yTopLost}"/>` : ''}
+      ${(lost > 0 && net > 0) ? `<line class="wf-conn" x1="${X_LOST+BAR_W}" y1="${yBotLost}"    x2="${X_NET}"  y2="${yTopNet}"/>` : ''}
 
       <!-- 1. Open / In Progress (below) -->
       ${open > 0 ? belowBar(X_OPEN, hOpen, open, 'wf-bar-open', openLabel) : emptyBelow(X_OPEN, noOpenLabel)}
@@ -1535,17 +1552,17 @@ function drawWaterfall(rows, mode, hostId, subId){
       ${won > 0 ? aboveBar(X_WON, hNewLogo, newLogo, 'wf-bar-new', wonLabel, '+') : emptyAbove(X_WON, noWonLabel)}
       ${isSeats ? (repls > 0 ? belowBar(X_REPL, hRepl, repls, 'wf-bar-repl', 'Seats Replaced') : emptyBelow(X_REPL, noReplLabel)) : ''}
 
-      <!-- 3. Closed Lost (above) -->
-      ${lost > 0 ? aboveBar(X_LOST, hLost, lost, 'wf-bar-lost', lostLabel, '−') : emptyAbove(X_LOST, noLostLabel)}
+      <!-- 3. Closed Lost — sits on top of Net (waterfall step) -->
+      ${lostStepBar(X_LOST)}
 
-      <!-- 4. Closed Consultation (below) -->
+      <!-- 4. Net (above) — what remains after Lost peels off -->
+      ${net > 0 ? aboveBar(X_NET, hNet, net, 'wf-bar-net', netLabel, '') : emptyAbove(X_NET, noNetLabel)}
+
+      <!-- 5. Closed Consultation (below) -->
       ${cons > 0 ? belowBar(X_CONS, hCons, cons, 'wf-bar-cons', consLabel) : emptyBelow(X_CONS, noConsLabel)}
 
-      <!-- 5. On Hold (below) -->
+      <!-- 6. On Hold (below) -->
       ${onHold > 0 ? belowBar(X_HOLD, hOnHold, onHold, 'wf-bar-hold', holdLabel) : emptyBelow(X_HOLD, noHoldLabel)}
-
-      <!-- 6. Net (above) -->
-      ${net > 0 ? aboveBar(X_NET, hNet, net, 'wf-bar-net', netLabel, '') : emptyAbove(X_NET, noNetLabel)}
 
       <!-- Axis line -->
       <line class="wf-axis" x1="60" y1="${AXIS_Y}" x2="${VB_W-40}" y2="${AXIS_Y}"/>
