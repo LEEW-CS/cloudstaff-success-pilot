@@ -412,6 +412,7 @@ table.opps tr:hover td{ background:#fafbfd }
 .wf-bar-repl  { fill:rgba(60,110,245,.10);  stroke:#3c6ef5; stroke-width:1.5; stroke-dasharray:6 4 } /* blue   */
 .wf-bar-cons  { fill:rgba(168,85,247,.10);  stroke:#a855f7; stroke-width:1.5; stroke-dasharray:6 4 } /* purple */
 .wf-bar-hold  { fill:rgba(245,158,11,.10);  stroke:#f59e0b; stroke-width:1.5; stroke-dasharray:6 4 } /* orange */
+.wf-bar-open  { fill:rgba(6,182,212,.10);   stroke:#06b6d4; stroke-width:1.5; stroke-dasharray:6 4 } /* cyan — Open / In Progress */
 .wf-axis      { stroke:#1a1a1a; stroke-width:1.5 }
 .wf-conn      { stroke:#999; stroke-width:1; stroke-dasharray:3 3; fill:none }
 .wf-bar-label { font-family:var(--font-sans); font-size:13px; font-weight:500; fill:#2a2a2a; text-anchor:middle }
@@ -433,6 +434,7 @@ table.opps tr:hover td{ background:#fafbfd }
 .wf-swatch-blue   { background:rgba(60,110,245,.10);  border:1.5px dashed #3c6ef5 }
 .wf-swatch-purple { background:rgba(168,85,247,.10);  border:1.5px dashed #a855f7 }
 .wf-swatch-orange { background:rgba(245,158,11,.10);  border:1.5px dashed #f59e0b }
+.wf-swatch-cyan   { background:rgba(6,182,212,.10);   border:1.5px dashed #06b6d4 }
 .wf-note{ margin-top:14px; font-size:12px; color:var(--ink-500); font-style:italic; line-height:1.5 }
 
 /* misc */
@@ -474,13 +476,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r18 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r19 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r18 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r19 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -543,7 +545,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r18</div>
+      <div class="rail-version">v1 r19</div>
     </div>
   </aside>
 
@@ -640,12 +642,13 @@ table.opps tr:hover td{ background:#fafbfd }
             <div class="wf-legend-item"><span class="wf-swatch wf-swatch-blue"></span>Replacements (seats only, net zero)</div>
             <div class="wf-legend-item"><span class="wf-swatch wf-swatch-purple"></span>Consultations (net zero)</div>
             <div class="wf-legend-item"><span class="wf-swatch wf-swatch-orange"></span>On Hold (net zero)</div>
+            <div class="wf-legend-item"><span class="wf-swatch wf-swatch-cyan"></span>Open / In Progress (active, net zero)</div>
           </div>
           <p class="wf-note">
             Items below the axis line &mdash; <em>Replacements</em> (seats chart only),
-            <em>Consultations</em>, and <em>On Hold</em> &mdash; contribute zero to the net position.
-            They&rsquo;re tracked separately so you can see related activity that doesn&rsquo;t
-            move the net number.
+            <em>Consultations</em>, <em>On Hold</em>, and <em>Open / In Progress</em> &mdash;
+            contribute zero to the net position but are real Success Pilot activity, so they
+            count toward the <strong>Total Effort</strong> figure on the right of each chart.
           </p>
         </div>
       </div>
@@ -1003,7 +1006,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r18";
+const APP_VERSION   = "v1 r19";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1323,7 +1326,7 @@ function renderDashboard(){
   const f = getDashFilters();
   const rows = applyDashFilters(visibleOpps(), f);
 
-  // (KPI tile row was removed in v1 r18 — the waterfalls now carry the
+  // (KPI tile row was removed in v1 r19 — the waterfalls now carry the
   // headline metrics. drawWaterfall computes its own counts.)
 
   // Pies
@@ -1388,12 +1391,13 @@ function drawWaterfall(rows, mode, hostId, subId){
   const sumSeats = (filterFn) => rows.filter(filterFn).reduce((a,r) => a + num(r.number_of_new_seats), 0);
   const cnt      = (filterFn) => rows.filter(filterFn).length;
 
-  let won, lost, repls, cons, onHold;
+  let won, lost, repls, cons, onHold, open;
   if (isSeats) {
     won    = sumSeats(r => r.current_status === 'Closed / Won');
     lost   = sumSeats(r => r.current_status === 'Closed / Lost');
     cons   = sumSeats(r => r.current_status === 'Closed / Consultation');
     onHold = sumSeats(r => r.current_status === 'On-Hold');
+    open   = sumSeats(r => r.current_status === 'Open / In Progress');
     repls  = rows.filter(r => r.type_of_engagement === 'Replacement')
                   .reduce((a,r) => a + num(r.number_of_replacement_seats), 0);
   } else {
@@ -1401,6 +1405,7 @@ function drawWaterfall(rows, mode, hostId, subId){
     lost   = cnt(r => r.current_status === 'Closed / Lost');
     cons   = cnt(r => r.current_status === 'Closed / Consultation');
     onHold = cnt(r => r.current_status === 'On-Hold');
+    open   = cnt(r => r.current_status === 'Open / In Progress');
     repls  = 0;   // Clients waterfall has NO replacements bar (replacements are seats, not clients)
   }
   const net   = Math.max(0, won - lost);
@@ -1412,20 +1417,19 @@ function drawWaterfall(rows, mode, hostId, subId){
   const host = document.getElementById(hostId);
   const subEl = document.getElementById(subId);
 
-  if (won === 0 && lost === 0 && repls === 0 && cons === 0 && onHold === 0) {
+  if (won === 0 && lost === 0 && repls === 0 && cons === 0 && onHold === 0 && open === 0) {
     host.innerHTML = `<div class="empty-state">No matching opportunities in the current selection.</div>`;
     subEl.textContent = '';
     return;
   }
 
-  // SVG geometry — wider viewBox to accommodate 5 bar columns
-  // (3 above the axis, 3 below if you count Replacements + Consultation + On-Hold).
-  const VB_W = 1100, VB_H = 480;
+  // SVG geometry — viewBox widened to fit 6 below-axis bar slots + Total Effort box on right.
+  const VB_W = 1300, VB_H = 480;
   const AXIS_Y = 320;
   const MAX_UP = 220, MAX_DOWN = 130;
   const topMax = Math.max(newLogo, net + lost, 1);
   const scaleUp = MAX_UP / topMax;
-  const downMax = Math.max(repls, cons, onHold, 1);
+  const downMax = Math.max(repls, cons, onHold, open, 1);
   const scaleDown = Math.min(MAX_DOWN / downMax, scaleUp);
 
   const BAR_W = 110;
@@ -1434,6 +1438,7 @@ function drawWaterfall(rows, mode, hostId, subId){
   const X3 = 450;       // Net
   const X4 = 620;       // Closed Consultation (below axis)
   const X5 = 790;       // On Hold (below axis)
+  const X6 = 960;       // Open / In Progress (below axis)
   const X_REPL = X1;    // Replacements (below axis, under Closed Won)
 
   const hNewLogo = newLogo * scaleUp;
@@ -1442,6 +1447,7 @@ function drawWaterfall(rows, mode, hostId, subId){
   const hRepl    = repls * scaleDown;
   const hCons    = cons * scaleDown;
   const hOnHold  = onHold * scaleDown;
+  const hOpen    = open * scaleDown;
 
   const yTopNewLogo = AXIS_Y - hNewLogo;
   const yTopLost    = AXIS_Y - hNewLogo;
@@ -1450,6 +1456,7 @@ function drawWaterfall(rows, mode, hostId, subId){
   const yReplBot    = AXIS_Y + hRepl;
   const yConsBot    = AXIS_Y + hCons;
   const yOnHoldBot  = AXIS_Y + hOnHold;
+  const yOpenBot    = AXIS_Y + hOpen;
 
   const fmt = n => Math.round(n).toLocaleString();
   const txtClassNewLogo = (hNewLogo >= 36) ? 'wf-bar-value-light' : 'wf-bar-value-dark';
@@ -1466,11 +1473,12 @@ function drawWaterfall(rows, mode, hostId, subId){
   const netLabel  = isSeats ? 'Net Seats' : 'Net Clients';
   const consLabel = isSeats ? 'Seats Consultations' : 'Client Consultations';
   const holdLabel = isSeats ? 'Seats On Hold' : 'Clients On Hold';
+  const openLabel = isSeats ? 'Seats In Progress' : 'Clients In Progress';
 
   // "Total Effort" summary box on the right — sum of every distinct activity bar
-  // (Won + Lost + Replacements + Consultations + On Hold). Net is intentionally
-  // excluded because Net = Won − Lost would double-count those two.
-  const totalEffort = won + lost + repls + cons + onHold;
+  // (Won + Lost + Replacements + Consultations + On Hold + Open). Net is excluded
+  // because Net = Won − Lost would double-count those two.
+  const totalEffort = won + lost + repls + cons + onHold + open;
   const unitLabel   = isSeats ? 'Seats' : 'Clients';
   const EFFORT_X    = VB_W - 175;       // box left edge
   const EFFORT_W    = 150;
@@ -1520,6 +1528,12 @@ function drawWaterfall(rows, mode, hostId, subId){
       <rect class="wf-bar-hold" x="${X5}" y="${AXIS_Y}" width="${BAR_W}" height="${hOnHold}" rx="2"/>
       <text class="wf-bar-value wf-bar-value-dark" x="${X5+BAR_W/2}" y="${AXIS_Y+hOnHold/2+6}">${fmt(onHold)}</text>
       <text class="wf-bar-label" x="${X5+BAR_W/2}" y="${yOnHoldBot+24}">${holdLabel}</text>
+      ` : ''}
+
+      ${open > 0 ? `
+      <rect class="wf-bar-open" x="${X6}" y="${AXIS_Y}" width="${BAR_W}" height="${hOpen}" rx="2"/>
+      <text class="wf-bar-value wf-bar-value-dark" x="${X6+BAR_W/2}" y="${AXIS_Y+hOpen/2+6}">${fmt(open)}</text>
+      <text class="wf-bar-label" x="${X6+BAR_W/2}" y="${yOpenBot+24}">${openLabel}</text>
       ` : ''}
 
       <!-- Total Effort summary (sum of every bar value on this chart) -->
