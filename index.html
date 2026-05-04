@@ -460,6 +460,39 @@ table.opps tr:hover td{ background:#fafbfd }
 .wf-swatch-cyan   { background:rgba(6,182,212,.10);   border:1.5px dashed #06b6d4 }
 .wf-note{ margin-top:14px; font-size:12px; color:var(--ink-500); font-style:italic; line-height:1.5 }
 
+/* ============= DRILL-DOWN DRAWER (slides in from right) ============= */
+.drawer-bg{
+  position:fixed; inset:0; background:rgba(15,23,42,.5);
+  z-index:60; opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.drawer-bg.open{ opacity:1; pointer-events:auto }
+.drawer{
+  position:fixed; top:0; right:0; height:100vh; width:560px; max-width:90vw;
+  background:#fff; box-shadow:-12px 0 40px rgba(15,23,42,.18);
+  z-index:70; transform:translateX(100%); transition:transform .25s ease;
+  display:flex; flex-direction:column;
+}
+.drawer.open{ transform:translateX(0) }
+.drawer-head{
+  padding:16px 20px; border-bottom:1px solid var(--ink-200);
+  display:flex; align-items:flex-start; gap:12px; flex:0 0 auto;
+}
+.drawer-title{ font-size:14.5px; font-weight:600; color:var(--ink-900); line-height:1.3 }
+.drawer-sub{ font-size:11.5px; color:var(--ink-500); margin-top:4px; font-family:var(--font-mono) }
+.drawer-close{
+  margin-left:auto; cursor:pointer; padding:6px; border-radius:6px;
+  color:var(--ink-500); flex:0 0 auto; line-height:0;
+}
+.drawer-close:hover{ background:var(--ink-100); color:var(--ink-900) }
+.drawer-body{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch }
+.drawer-body table.opps{ font-size:11.5px }
+.drawer-body table.opps th,
+.drawer-body table.opps td{ padding:6px 9px; max-width:200px }
+.drawer-body table.opps th{ position:sticky; top:0; z-index:1 }
+.chart-canvas-wrap canvas{ cursor:pointer }
+.waterfall-card svg rect[data-bucket]{ cursor:pointer }
+.waterfall-card svg rect[data-bucket]:hover{ filter:brightness(1.08) }
+
 /* misc */
 .empty-state{ padding:40px; text-align:center; color:var(--ink-500); font-size:13px }
 
@@ -563,13 +596,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r27 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r28 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r27 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r28 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -672,7 +705,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r27</div>
+      <div class="rail-version">v1 r28</div>
     </div>
   </aside>
 
@@ -807,7 +840,7 @@ table.opps tr:hover td{ background:#fafbfd }
         </div>
       </div>
 
-      <!-- Insights row (v1 r27): Win Rate trend + Closed Lost Reasons -->
+      <!-- Insights row (v1 r28): Win Rate trend + Closed Lost Reasons -->
       <div class="charts-row-2">
         <div class="chart-card">
           <div class="chart-title">Win Rate Trend</div>
@@ -1174,6 +1207,28 @@ table.opps tr:hover td{ background:#fafbfd }
   </div>
 </div>
 
+<!-- ===== DRILL-DOWN DRAWER ===== -->
+<div class="drawer-bg" id="drawer-bg"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-labelledby="drawer-title">
+  <div class="drawer-head">
+    <div style="min-width:0;flex:1">
+      <div class="drawer-title" id="drawer-title">Filtered opportunities</div>
+      <div class="drawer-sub" id="drawer-sub">0 rows</div>
+    </div>
+    <div class="drawer-close" id="drawer-close" title="Close (Esc)" aria-label="Close drawer">
+      <svg style="width:18px;height:18px" viewBox="0 0 24 24"><use href="#i-x"/></svg>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <table class="opps">
+      <thead><tr>
+        <th>SP</th><th>Client</th><th>Describe</th><th>Type</th><th>Status</th><th>Seats</th><th>Date</th>
+      </tr></thead>
+      <tbody id="drawer-tbody"></tbody>
+    </table>
+  </div>
+</aside>
+
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
@@ -1182,7 +1237,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r27";
+const APP_VERSION   = "v1 r28";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1381,7 +1436,7 @@ async function sendResetCode(){
   btn.disabled = false; btn.textContent = 'Send Reset Code';
 }
 
-// Renamed in v1 r27 — collided with the admin password-reset modal handler
+// Renamed in v1 r28 — collided with the admin password-reset modal handler
 // of the same name defined later in the file (last-declared-wins). The login
 // flow now uses submitLoginPasswordReset; the admin modal keeps the original.
 async function submitLoginPasswordReset(){
@@ -1613,7 +1668,7 @@ function renderDashboard(){
   const f = getDashFilters();
   const rows = applyDashFilters(visibleOpps(), f);
 
-  // (KPI tile row was removed in v1 r27 — the waterfalls now carry the
+  // (KPI tile row was removed in v1 r28 — the waterfalls now carry the
   // headline metrics. drawWaterfall computes its own counts.)
 
   // Pies
@@ -1622,18 +1677,27 @@ function renderDashboard(){
   const STATUS_COLORS = { 'Open / In Progress':'#3c6ef5','Closed / Won':'#10b981','Closed / Lost':'#ef4444','Closed / Consultation':'#a855f7','On-Hold':'#f59e0b' };
 
   const clientCounts = TYPES.map(t => rows.filter(r => r.type_of_engagement === t).length);
-  drawPie('ch-client', TYPES, clientCounts, TYPE_COLORS);
+  drawPie('ch-client', TYPES, clientCounts, TYPE_COLORS, (label) => {
+    const slice = rows.filter(r => r.type_of_engagement === label);
+    openDrawer(`Client Count Breakdown — ${label}`, filterSummary(f), slice);
+  });
 
   // Total Seats: only types that produce seats (exclude AM Consultation)
   const SEATTYPES = ['Sales New Logo','Sales Organic','Replacement'];
   const SEATCOLS  = ['#3c6ef5','#22d3ee','#f59e0b'];
   const seatCounts = SEATTYPES.map(t => rows.filter(r => r.type_of_engagement === t).reduce((a,r)=>a+num(r.number_of_new_seats),0));
-  drawPie('ch-seats', SEATTYPES, seatCounts, SEATCOLS);
+  drawPie('ch-seats', SEATTYPES, seatCounts, SEATCOLS, (label) => {
+    const slice = rows.filter(r => r.type_of_engagement === label && num(r.number_of_new_seats) > 0);
+    openDrawer(`Total Seats Breakdown — ${label}`, filterSummary(f), slice);
+  });
 
   // Closed Won breakdown by type
   const wonRows = rows.filter(r => r.current_status === 'Closed / Won');
   const wonCounts = TYPES.map(t => wonRows.filter(r => r.type_of_engagement === t).length);
-  drawPie('ch-won', TYPES, wonCounts, TYPE_COLORS);
+  drawPie('ch-won', TYPES, wonCounts, TYPE_COLORS, (label) => {
+    const slice = wonRows.filter(r => r.type_of_engagement === label);
+    openDrawer(`Closed Won — ${label}`, filterSummary(f), slice);
+  });
 
   // Progression — month-by-month within selected year (or last 12 months if no year)
   drawProgression(rows, f);
@@ -1641,7 +1705,10 @@ function renderDashboard(){
   // Engagement Status
   const STATUSES = ['Open / In Progress','Closed / Won','Closed / Lost','Closed / Consultation','On-Hold'];
   const statusCounts = STATUSES.map(s => rows.filter(r => r.current_status === s).length);
-  drawHBar('ch-status', STATUSES, statusCounts, STATUSES.map(s => STATUS_COLORS[s]));
+  drawHBar('ch-status', STATUSES, statusCounts, STATUSES.map(s => STATUS_COLORS[s]), (label) => {
+    const slice = rows.filter(r => r.current_status === label);
+    openDrawer(`Status — ${label}`, filterSummary(f), slice);
+  });
 
   // Opps table at bottom
   $('dash-opps-count').textContent = `${rows.length.toLocaleString()} rows`;
@@ -1663,10 +1730,61 @@ function renderDashboard(){
   drawWaterfall(rows, 'clients', 'wf-chart-clients', 'dash-wf-sub-clients');
   drawWaterfall(rows, 'seats',   'wf-chart-seats',   'dash-wf-sub-seats');
 
-  // Insights (v1 r27/r26)
+  // Insights (v1 r28/r26)
   drawWinRateTrend(rows, f);
-  drawClosedLostReasons(rows);
+  drawClosedLostReasons(rows, f);
   drawActivityCoverage(allOpps, f);
+}
+
+/* ========================================================
+   DRILL-DOWN DRAWER — open with a row-set + title
+   ======================================================== */
+function openDrawer(title, sub, rows){
+  $('drawer-title').textContent = title;
+  $('drawer-sub').textContent = `${rows.length.toLocaleString()} ${rows.length === 1 ? 'opportunity' : 'opportunities'}${sub ? ' · ' + sub : ''}`;
+  $('drawer-tbody').innerHTML = rows.slice(0, 500).map(r => `
+    <tr>
+      <td><b>${escapeHtml(r.sp || '')}</b></td>
+      <td>${clientCell(r)}</td>
+      <td title="${escapeHtml(r.describe_opportunity || '')}">${escapeHtml(r.describe_opportunity || '')}</td>
+      <td>${typeTag(r.type_of_engagement)}</td>
+      <td>${statusTag(r.current_status)}</td>
+      <td class="mono">${r.number_of_new_seats ?? ''}</td>
+      <td class="mono">${fmtDate(r.engagement_start_date)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" class="empty-state">No opportunities match this segment.</td></tr>';
+  $('drawer').classList.add('open');
+  $('drawer-bg').classList.add('open');
+}
+function closeDrawer(){
+  $('drawer').classList.remove('open');
+  $('drawer-bg').classList.remove('open');
+}
+
+// Waterfall bar -> drawer. Each <rect> in the SVG has data-bucket + data-mode.
+function onWaterfallClick(e){
+  const rect = e.target.closest('rect[data-bucket]');
+  if (!rect) return;
+  const bucket = rect.dataset.bucket;
+  const mode   = rect.dataset.mode;     // 'clients' or 'seats'
+  const f      = getDashFilters();
+  const rows   = applyDashFilters(visibleOpps(), f);
+
+  // Map bucket -> (predicate, title)
+  const predMap = {
+    open:  { pred: r => r.current_status === 'Open / In Progress',     label: 'In Progress' },
+    won:   { pred: r => r.current_status === 'Closed / Won',           label: 'Closed Won' },
+    lost:  { pred: r => r.current_status === 'Closed / Lost',          label: 'Closed Lost' },
+    net:   { pred: r => r.current_status === 'Closed / Won',           label: 'Net (= Closed Won)' },
+    cons:  { pred: r => r.current_status === 'Closed / Consultation',  label: 'Closed Consultation' },
+    hold:  { pred: r => r.current_status === 'On-Hold',                label: 'On Hold' },
+    repl:  { pred: r => r.type_of_engagement === 'Replacement',        label: 'Replacements' },
+  };
+  const m = predMap[bucket];
+  if (!m) return;
+  const slice = rows.filter(m.pred);
+  const modeLabel = mode === 'seats' ? 'Seats waterfall' : 'Clients waterfall';
+  openDrawer(`${modeLabel} — ${m.label}`, filterSummary(f), slice);
 }
 
 /* ─────────── Win Rate Trend (line chart) ───────────
@@ -1740,7 +1858,14 @@ function drawWinRateTrend(rows, f){
           ticks:{ font:{family:'JetBrains Mono',size:10}, callback:(v)=>v+'%' },
           grid:{ color:'rgba(0,0,0,.05)' },
         }
-      }
+      },
+      onClick: (evt, els) => {
+        if (!els.length) return;
+        const ym = months[els[0].index];
+        const slice = rows.filter(r => (r.engagement_start_date || '').slice(0,7) === ym
+          && (r.current_status === 'Closed / Won' || r.current_status === 'Closed / Lost'));
+        openDrawer(`Closed in ${labels[els[0].index]}`, `Win rate ${data[els[0].index]}% · ${filterSummary(f)}`, slice);
+      },
     }
   });
 }
@@ -1748,7 +1873,7 @@ function drawWinRateTrend(rows, f){
 /* ─────────── Closed Lost Reasons (horizontal bar) ───────────
  * Tallies the closed_lost_reasons field across all Closed/Lost opps.
  */
-function drawClosedLostReasons(rows){
+function drawClosedLostReasons(rows, f){
   const id = 'ch-lost-reasons';
   charts[id]?.destroy?.();
   if (!$(id)) return;
@@ -1791,7 +1916,13 @@ function drawClosedLostReasons(rows){
       scales:{
         x:{ beginAtZero:true, ticks:{font:{family:'JetBrains Mono',size:10}} },
         y:{ ticks:{ font:{family:'Inter',size:10.5}, autoSkip:false } }
-      }
+      },
+      onClick: (evt, els) => {
+        if (!els.length) return;
+        const reason = labels[els[0].index];
+        const slice = lostRows.filter(r => ((r.closed_lost_reasons || '').trim() || '(none recorded)') === reason);
+        openDrawer(`Closed Lost — ${reason}`, filterSummary(f), slice);
+      },
     }
   });
 }
@@ -1908,7 +2039,24 @@ function drawActivityCoverage(allRowsArg, f){
       scales:{
         x:{ stacked:true, beginAtZero:true, ticks:{font:{family:'JetBrains Mono',size:10}}, grid:{color:'rgba(0,0,0,.05)'} },
         y:{ stacked:true, ticks:{ font:{family:'Inter',size:11.5}, autoSkip:false } }
-      }
+      },
+      onClick: (evt, els) => {
+        if (!els.length) return;
+        const e = entries[els[0].index];
+        const datasetIdx = els[0].datasetIndex;   // 0 = logged, 1 = missing
+        const wantLogged = datasetIdx === 0;
+        const slice = scopedRows.filter(r => {
+          const sp = (r.sp || '').trim() || '(unattributed)';
+          if (sp !== e.sp) return false;
+          return hasActivity(r) === wantLogged;
+        });
+        const subFilter = filterSummary({ ...f, sp: '' });   // SP filter doesn't apply
+        openDrawer(
+          `${e.sp} — ${wantLogged ? 'Activity logged' : 'No activity recorded'}`,
+          subFilter,
+          slice
+        );
+      },
     },
     plugins:[pctLabelPlugin]
   });
@@ -1961,7 +2109,7 @@ function drawWaterfall(rows, mode, hostId, subId){
   }
 
   // SVG geometry — viewBox 1300, axis at y=320.
-  // New left-to-right order (v1 r27):
+  // New left-to-right order (v1 r28):
   //   1. Open / In Progress (below axis)
   //   2. Closed Won (above) + Replacements (below, seats only)
   //   3. Closed Lost — sits ON TOP of Net (true waterfall step-down)
@@ -2027,21 +2175,22 @@ function drawWaterfall(rows, mode, hostId, subId){
   const EFFORT_H    = 130;
   const EFFORT_CX   = EFFORT_X + EFFORT_W / 2;
 
-  // Helpers for individual bar slots
-  const aboveBar = (x, h, val, color, label, sign='') => {
+  // Helpers for individual bar slots — every <rect> gets a data-bucket attr
+  // so the parent SVG's delegated click handler can drill into the right slice.
+  const aboveBar = (x, h, val, color, label, sign='', bucket='') => {
     const yTop = AXIS_Y - h;
     const txtCls = h >= 36 ? 'wf-bar-value-light' : 'wf-bar-value-dark';
     const labelCls = h >= 36 ? 'wf-bar-value-light' : 'wf-bar-value-dark';
     const yVal = h >= 36 ? (yTop + h/2 + 6) : (yTop - 8);
     return `
-      <rect class="${color}" x="${x}" y="${yTop}" width="${BAR_W}" height="${h}" rx="2"/>
-      <text class="wf-bar-label ${labelCls}" x="${x+BAR_W/2}" y="${yTop+22}">${label}</text>
-      <text class="wf-bar-value ${txtCls}" x="${x+BAR_W/2}" y="${yVal}">${sign}${fmt(val)}</text>`;
+      <rect class="${color}" data-bucket="${bucket}" data-mode="${mode}" x="${x}" y="${yTop}" width="${BAR_W}" height="${h}" rx="2"/>
+      <text class="wf-bar-label ${labelCls}" x="${x+BAR_W/2}" y="${yTop+22}" pointer-events="none">${label}</text>
+      <text class="wf-bar-value ${txtCls}" x="${x+BAR_W/2}" y="${yVal}" pointer-events="none">${sign}${fmt(val)}</text>`;
   };
-  const belowBar = (x, h, val, color, label) => `
-      <rect class="${color}" x="${x}" y="${AXIS_Y}" width="${BAR_W}" height="${h}" rx="2"/>
-      <text class="wf-bar-value wf-bar-value-dark" x="${x+BAR_W/2}" y="${AXIS_Y+h/2+6}">${fmt(val)}</text>
-      <text class="wf-bar-label" x="${x+BAR_W/2}" y="${AXIS_Y+h+24}">${label}</text>`;
+  const belowBar = (x, h, val, color, label, bucket='') => `
+      <rect class="${color}" data-bucket="${bucket}" data-mode="${mode}" x="${x}" y="${AXIS_Y}" width="${BAR_W}" height="${h}" rx="2"/>
+      <text class="wf-bar-value wf-bar-value-dark" x="${x+BAR_W/2}" y="${AXIS_Y+h/2+6}" pointer-events="none">${fmt(val)}</text>
+      <text class="wf-bar-label" x="${x+BAR_W/2}" y="${AXIS_Y+h+24}" pointer-events="none">${label}</text>`;
   const emptyBelow = (x, label) => `
       <text class="wf-bar-empty" x="${x+BAR_W/2}" y="${AXIS_Y+22}">${label}</text>`;
   const emptyAbove = (x, label) => `
@@ -2064,9 +2213,9 @@ function drawWaterfall(rows, mode, hostId, subId){
     const valY = hLost >= 30 ? yLostMid + 6 : yBotLost + 22;
     const valCls = hLost >= 30 ? 'wf-bar-value-light' : 'wf-bar-value-dark';
     return `
-      <rect class="wf-bar-lost" x="${x}" y="${yTopLost}" width="${BAR_W}" height="${hLost}" rx="2"/>
-      <text class="wf-bar-label" x="${x+BAR_W/2}" y="${Math.max(20, yTopLost-10)}">${lostLabel}</text>
-      <text class="wf-bar-value ${valCls}" x="${x+BAR_W/2}" y="${valY}">−${fmt(lost)}</text>`;
+      <rect class="wf-bar-lost" data-bucket="lost" data-mode="${mode}" x="${x}" y="${yTopLost}" width="${BAR_W}" height="${hLost}" rx="2"/>
+      <text class="wf-bar-label" x="${x+BAR_W/2}" y="${Math.max(20, yTopLost-10)}" pointer-events="none">${lostLabel}</text>
+      <text class="wf-bar-value ${valCls}" x="${x+BAR_W/2}" y="${valY}" pointer-events="none">−${fmt(lost)}</text>`;
   };
 
   const svg = `
@@ -2081,23 +2230,23 @@ function drawWaterfall(rows, mode, hostId, subId){
       ${(lost > 0 && net > 0) ? `<line class="wf-conn" x1="${X_LOST+BAR_W}" y1="${yBotLost}"    x2="${X_NET}"  y2="${yTopNet}"/>` : ''}
 
       <!-- 1. Open / In Progress (below) -->
-      ${open > 0 ? belowBar(X_OPEN, hOpen, open, 'wf-bar-open', openLabel) : emptyBelow(X_OPEN, noOpenLabel)}
+      ${open > 0 ? belowBar(X_OPEN, hOpen, open, 'wf-bar-open', openLabel, 'open') : emptyBelow(X_OPEN, noOpenLabel)}
 
       <!-- 2. Closed Won (above) + Replacements (below, seats only) -->
-      ${won > 0 ? aboveBar(X_WON, hNewLogo, newLogo, 'wf-bar-new', wonLabel, '+') : emptyAbove(X_WON, noWonLabel)}
-      ${isSeats ? (repls > 0 ? belowBar(X_REPL, hRepl, repls, 'wf-bar-repl', 'Seats Replaced') : emptyBelow(X_REPL, noReplLabel)) : ''}
+      ${won > 0 ? aboveBar(X_WON, hNewLogo, newLogo, 'wf-bar-new', wonLabel, '+', 'won') : emptyAbove(X_WON, noWonLabel)}
+      ${isSeats ? (repls > 0 ? belowBar(X_REPL, hRepl, repls, 'wf-bar-repl', 'Seats Replaced', 'repl') : emptyBelow(X_REPL, noReplLabel)) : ''}
 
       <!-- 3. Closed Lost — sits on top of Net (waterfall step) -->
       ${lostStepBar(X_LOST)}
 
       <!-- 4. Net (above) — what remains after Lost peels off -->
-      ${net > 0 ? aboveBar(X_NET, hNet, net, 'wf-bar-net', netLabel, '') : emptyAbove(X_NET, noNetLabel)}
+      ${net > 0 ? aboveBar(X_NET, hNet, net, 'wf-bar-net', netLabel, '', 'net') : emptyAbove(X_NET, noNetLabel)}
 
       <!-- 5. Closed Consultation (below) -->
-      ${cons > 0 ? belowBar(X_CONS, hCons, cons, 'wf-bar-cons', consLabel) : emptyBelow(X_CONS, noConsLabel)}
+      ${cons > 0 ? belowBar(X_CONS, hCons, cons, 'wf-bar-cons', consLabel, 'cons') : emptyBelow(X_CONS, noConsLabel)}
 
       <!-- 6. On Hold (below) -->
-      ${onHold > 0 ? belowBar(X_HOLD, hOnHold, onHold, 'wf-bar-hold', holdLabel) : emptyBelow(X_HOLD, noHoldLabel)}
+      ${onHold > 0 ? belowBar(X_HOLD, hOnHold, onHold, 'wf-bar-hold', holdLabel, 'hold') : emptyBelow(X_HOLD, noHoldLabel)}
 
       <!-- Axis line -->
       <line class="wf-axis" x1="60" y1="${AXIS_Y}" x2="${VB_W-40}" y2="${AXIS_Y}"/>
@@ -2174,7 +2323,7 @@ function _drawWaterfall_DEPRECATED(rows){
   });
 }
 
-function drawPie(canvasId, labels, data, colors){
+function drawPie(canvasId, labels, data, colors, onSliceClick){
   charts[canvasId]?.destroy?.();
   const ctx = $(canvasId).getContext('2d');
   const total = data.reduce((a,b)=>a+b,0);
@@ -2188,11 +2337,15 @@ function drawPie(canvasId, labels, data, colors){
         tooltip:{ callbacks:{ label:(c)=> `${c.label}: ${c.parsed} (${total?((c.parsed/total)*100).toFixed(1):'0'}%)` } }
       },
       cutout:'45%',
+      onClick: (evt, els, chart) => {
+        if (!els.length || !onSliceClick) return;
+        onSliceClick(chart.data.labels[els[0].index]);
+      },
     }
   });
 }
 
-function drawHBar(canvasId, labels, data, colors){
+function drawHBar(canvasId, labels, data, colors, onBarClick){
   charts[canvasId]?.destroy?.();
   const ctx = $(canvasId).getContext('2d');
   charts[canvasId] = new Chart(ctx, {
@@ -2201,7 +2354,11 @@ function drawHBar(canvasId, labels, data, colors){
     options:{
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ display:false } },
-      scales:{ x:{ beginAtZero:true, ticks:{ font:{family:'JetBrains Mono',size:11} } }, y:{ ticks:{ font:{family:'Inter',size:11.5} } } }
+      scales:{ x:{ beginAtZero:true, ticks:{ font:{family:'JetBrains Mono',size:11} } }, y:{ ticks:{ font:{family:'Inter',size:11.5} } } },
+      onClick: (evt, els, chart) => {
+        if (!els.length || !onBarClick) return;
+        onBarClick(chart.data.labels[els[0].index]);
+      },
     }
   });
 }
@@ -2212,8 +2369,9 @@ function drawProgression(rows, f){
   const ctx = $(id).getContext('2d');
 
   // If a year is selected, show 12 months of that year. Otherwise: show year totals.
-  let labels, data;
+  let labels, data, mode;
   if (f.year) {
+    mode = 'month';
     labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     data = Array(12).fill(0);
     rows.forEach(r => {
@@ -2224,6 +2382,7 @@ function drawProgression(rows, f){
       if (m>=1 && m<=12) data[m-1]++;
     });
   } else {
+    mode = 'year';
     const years = {};
     rows.forEach(r => {
       const y = (r.engagement_start_date||'').slice(0,4);
@@ -2239,9 +2398,33 @@ function drawProgression(rows, f){
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => `Client Count: ${c.parsed.y}` } } },
-      scales:{ x:{ ticks:{ font:{family:'Inter',size:11} } }, y:{ beginAtZero:true, ticks:{ font:{family:'JetBrains Mono',size:11} } } }
+      scales:{ x:{ ticks:{ font:{family:'Inter',size:11} } }, y:{ beginAtZero:true, ticks:{ font:{family:'JetBrains Mono',size:11} } } },
+      onClick: (evt, els) => {
+        if (!els.length) return;
+        const idx = els[0].index;
+        if (mode === 'month') {
+          const mm = String(idx + 1).padStart(2, '0');
+          const yyyy = f.year;
+          const slice = rows.filter(r => (r.engagement_start_date || '').startsWith(`${yyyy}-${mm}`));
+          openDrawer(`Started in ${labels[idx]} ${yyyy}`, filterSummary({ ...f, month: '' }), slice);
+        } else {
+          const y = labels[idx];
+          const slice = rows.filter(r => (r.engagement_start_date || '').startsWith(`${y}-`));
+          openDrawer(`Started in ${y}`, filterSummary({ ...f, year: '' }), slice);
+        }
+      },
     }
   });
+}
+
+// Build a small "Archie Balondo · 2026 · Mar" summary string from the active filters.
+function filterSummary(f){
+  const bits = [];
+  if (f.sp) bits.push(f.sp);
+  if (f.year) bits.push(f.year);
+  if (f.month) bits.push(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(f.month,10)-1]);
+  if (f.status) bits.push(f.status);
+  return bits.length ? bits.join(' · ') : 'all SPs · all time';
 }
 
 /* ========================================================
@@ -2671,6 +2854,15 @@ async function bootApp(){
 }
 
 function bindEvents(){
+  // Drill-down drawer
+  $('drawer-close').addEventListener('click', closeDrawer);
+  $('drawer-bg').addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+  // Waterfall SVG click delegation (rects with data-bucket)
+  ['wf-chart-clients', 'wf-chart-seats'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', onWaterfallClick);
+  });
+
   // Password-reset panel switching
   $('show-forgot-btn').addEventListener('click', () => {
     $('forgot-email').value = $('login-email').value || '';
