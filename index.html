@@ -421,6 +421,12 @@ table.opps tr:hover td{ background:#fafbfd }
 .wf-total-label{ font-family:var(--font-sans); font-size:14px; font-weight:600; fill:#1a1a1a }
 .wf-total-value{ font-family:var(--font-sans); font-size:24px; font-weight:700; fill:#10b981 }
 
+/* Total Effort summary box on the right of each waterfall */
+.wf-effort-box  { fill:#f5f1e8; stroke:#1a4d3a; stroke-width:1.5; stroke-opacity:.55 }
+.wf-effort-label{ font-family:var(--font-sans); font-size:13px; font-weight:600; fill:#4a4a4a; text-anchor:middle; letter-spacing:.06em; text-transform:uppercase }
+.wf-effort-value{ font-family:var(--font-sans); font-size:42px; font-weight:800; fill:#1a4d3a; text-anchor:middle }
+.wf-effort-unit { font-family:var(--font-sans); font-size:13px; font-weight:600; fill:#6a6a6a; text-anchor:middle }
+
 .wf-legend{ display:flex; gap:24px; padding:0; flex-wrap:wrap; font-size:12.5px; color:var(--ink-600) }
 .wf-legend-item{ display:flex; align-items:center; gap:8px }
 .wf-swatch{ width:14px; height:14px; border-radius:2px }
@@ -468,13 +474,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r16 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r17 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r16 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r17 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -537,7 +543,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r16</div>
+      <div class="rail-version">v1 r17</div>
     </div>
   </aside>
 
@@ -587,41 +593,7 @@ table.opps tr:hover td{ background:#fafbfd }
         </div>
       </div>
 
-      <div class="kpi-grid">
-        <div class="kpi"><div class="kpi-label">Client Count</div><div class="kpi-value" id="kpi-client">0</div></div>
-        <div class="kpi kpi-seats"><div class="kpi-label">Total Seats</div><div class="kpi-value" id="kpi-seats">0</div></div>
-        <div class="kpi kpi-won"><div class="kpi-label">Closed Won</div><div class="kpi-value" id="kpi-won">0</div></div>
-        <div class="kpi kpi-lost"><div class="kpi-label">Closed Lost</div><div class="kpi-value" id="kpi-lost">0</div></div>
-        <div class="kpi kpi-rep"><div class="kpi-label">Replacement</div><div class="kpi-value" id="kpi-rep">0</div></div>
-      </div>
-
-      <div class="charts-row">
-        <div class="chart-card">
-          <div class="chart-title">Client Count Breakdown</div>
-          <div class="chart-canvas-wrap"><canvas id="ch-client"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">Total Seats Breakdown</div>
-          <div class="chart-canvas-wrap"><canvas id="ch-seats"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">Closed Won Breakdown</div>
-          <div class="chart-canvas-wrap"><canvas id="ch-won"></canvas></div>
-        </div>
-      </div>
-
-      <div class="charts-row-2">
-        <div class="chart-card">
-          <div class="chart-title">Client Count Progression</div>
-          <div class="chart-canvas-wrap"><canvas id="ch-progression"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">Engagement Status by Client Count</div>
-          <div class="chart-canvas-wrap"><canvas id="ch-status"></canvas></div>
-        </div>
-      </div>
-
-      <!-- Success Pilot Opportunity Involvement — two side-by-side waterfalls -->
+      <!-- Success Pilot Opportunity Involvement — two side-by-side waterfalls (top of dashboard) -->
       <div class="card" style="background:transparent;border:none;box-shadow:none;padding:0">
         <div style="margin:0 0 8px 4px">
           <div class="card-title" style="font-family:var(--font-serif, var(--font-sans));font-size:18px">Success Pilot Opportunity Involvement</div>
@@ -675,6 +647,40 @@ table.opps tr:hover td{ background:#fafbfd }
             They&rsquo;re tracked separately so you can see related activity that doesn&rsquo;t
             move the net number.
           </p>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Client Count</div><div class="kpi-value" id="kpi-client">0</div></div>
+        <div class="kpi kpi-seats"><div class="kpi-label">Total Seats</div><div class="kpi-value" id="kpi-seats">0</div></div>
+        <div class="kpi kpi-won"><div class="kpi-label">Closed Won</div><div class="kpi-value" id="kpi-won">0</div></div>
+        <div class="kpi kpi-lost"><div class="kpi-label">Closed Lost</div><div class="kpi-value" id="kpi-lost">0</div></div>
+        <div class="kpi kpi-rep"><div class="kpi-label">Replacement</div><div class="kpi-value" id="kpi-rep">0</div></div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Client Count Breakdown</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-client"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Total Seats Breakdown</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-seats"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Closed Won Breakdown</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-won"></canvas></div>
+        </div>
+      </div>
+
+      <div class="charts-row-2">
+        <div class="chart-card">
+          <div class="chart-title">Client Count Progression</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-progression"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Engagement Status by Client Count</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-status"></canvas></div>
         </div>
       </div>
 
@@ -1005,7 +1011,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r16";
+const APP_VERSION   = "v1 r17";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1477,6 +1483,15 @@ function drawWaterfall(rows, mode, hostId, subId){
   const consLabel = isSeats ? 'Seats Consultations' : 'Client Consultations';
   const holdLabel = isSeats ? 'Seats On Hold' : 'Clients On Hold';
 
+  // "Total Effort" summary box on the right — sum of every value rendered on the chart.
+  const totalEffort = won + lost + net + repls + cons + onHold;
+  const unitLabel   = isSeats ? 'Seats' : 'Clients';
+  const EFFORT_X    = VB_W - 175;       // box left edge
+  const EFFORT_W    = 150;
+  const EFFORT_Y    = AXIS_Y - 175;     // box top edge
+  const EFFORT_H    = 130;
+  const EFFORT_CX   = EFFORT_X + EFFORT_W / 2;
+
   const svg = `
     <svg viewBox="0 0 ${VB_W} ${VB_H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${isSeats?'Seats':'Clients'} waterfall">
       ${showTotalAdded ? `
@@ -1520,6 +1535,12 @@ function drawWaterfall(rows, mode, hostId, subId){
       <text class="wf-bar-value wf-bar-value-dark" x="${X5+BAR_W/2}" y="${AXIS_Y+hOnHold/2+6}">${fmt(onHold)}</text>
       <text class="wf-bar-label" x="${X5+BAR_W/2}" y="${yOnHoldBot+24}">${holdLabel}</text>
       ` : ''}
+
+      <!-- Total Effort summary (sum of every bar value on this chart) -->
+      <rect class="wf-effort-box" x="${EFFORT_X}" y="${EFFORT_Y}" width="${EFFORT_W}" height="${EFFORT_H}" rx="6"/>
+      <text class="wf-effort-label" x="${EFFORT_CX}" y="${EFFORT_Y + 28}">Total Effort</text>
+      <text class="wf-effort-value" x="${EFFORT_CX}" y="${EFFORT_Y + 80}">${fmt(totalEffort)}</text>
+      <text class="wf-effort-unit"  x="${EFFORT_CX}" y="${EFFORT_Y + 108}">${unitLabel}</text>
     </svg>
   `;
   host.innerHTML = svg;
