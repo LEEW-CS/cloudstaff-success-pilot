@@ -419,6 +419,8 @@ table.opps tr:hover td{ background:#fafbfd }
 .wf-bar-value { font-family:var(--font-sans); font-size:18px; font-weight:700; text-anchor:middle }
 .wf-bar-value-light{ fill:#fff }
 .wf-bar-value-dark { fill:#2a2a2a }
+/* Zero-state placeholder text — for bars whose count is 0 */
+.wf-bar-empty { font-family:var(--font-sans); font-size:11.5px; font-weight:500; fill:#94a3b8; font-style:italic; text-anchor:middle }
 .wf-total-label{ font-family:var(--font-sans); font-size:14px; font-weight:600; fill:#1a1a1a }
 .wf-total-value{ font-family:var(--font-sans); font-size:24px; font-weight:700; fill:#10b981 }
 
@@ -476,13 +478,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r19 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r20 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r19 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r20 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -545,7 +547,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r19</div>
+      <div class="rail-version">v1 r20</div>
     </div>
   </aside>
 
@@ -1006,7 +1008,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r19";
+const APP_VERSION   = "v1 r20";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1326,7 +1328,7 @@ function renderDashboard(){
   const f = getDashFilters();
   const rows = applyDashFilters(visibleOpps(), f);
 
-  // (KPI tile row was removed in v1 r19 — the waterfalls now carry the
+  // (KPI tile row was removed in v1 r20 — the waterfalls now carry the
   // headline metrics. drawWaterfall computes its own counts.)
 
   // Pies
@@ -1423,24 +1425,33 @@ function drawWaterfall(rows, mode, hostId, subId){
     return;
   }
 
-  // SVG geometry — viewBox widened to fit 6 below-axis bar slots + Total Effort box on right.
+  // SVG geometry — viewBox widened to fit 6 columns + Total Effort box on right.
+  // New left-to-right order (v1 r20 experiment):
+  //   1. Open / In Progress (below axis)
+  //   2. Closed Won (above) + Replacements (below, seats only)
+  //   3. Closed Lost (above)
+  //   4. Closed Consultation (below)
+  //   5. On Hold (below)
+  //   6. Net (above)
   const VB_W = 1300, VB_H = 480;
   const AXIS_Y = 320;
   const MAX_UP = 220, MAX_DOWN = 130;
-  const topMax = Math.max(newLogo, net + lost, 1);
+  const topMax = Math.max(newLogo, lost, net, 1);
   const scaleUp = MAX_UP / topMax;
   const downMax = Math.max(repls, cons, onHold, open, 1);
   const scaleDown = Math.min(MAX_DOWN / downMax, scaleUp);
 
   const BAR_W = 110;
-  const X1 = 110;       // Closed Won (above) + Replacements (below)
-  const X2 = 280;       // Closed Lost (sits on top of Net)
-  const X3 = 450;       // Net
-  const X4 = 620;       // Closed Consultation (below axis)
-  const X5 = 790;       // On Hold (below axis)
-  const X6 = 960;       // Open / In Progress (below axis)
-  const X_REPL = X1;    // Replacements (below axis, under Closed Won)
+  const X_OPEN = 110;   // 1. Open / In Progress
+  const X_WON  = 280;   // 2. Closed Won (and Replacements stack below)
+  const X_LOST = 450;   // 3. Closed Lost
+  const X_CONS = 620;   // 4. Closed Consultation
+  const X_HOLD = 790;   // 5. On Hold
+  const X_NET  = 960;   // 6. Net
+  const X_REPL = X_WON; // Replacements (below axis, under Won, seats only)
 
+  // Aliases used by older annotation logic
+  const X1 = X_WON;     // for the Total Added annotation, anchor to Won column
   const hNewLogo = newLogo * scaleUp;
   const hNet     = net * scaleUp;
   const hLost    = lost * scaleUp;
@@ -1450,20 +1461,15 @@ function drawWaterfall(rows, mode, hostId, subId){
   const hOpen    = open * scaleDown;
 
   const yTopNewLogo = AXIS_Y - hNewLogo;
-  const yTopLost    = AXIS_Y - hNewLogo;
+  const yTopLost    = AXIS_Y - hLost;
   const yTopNet     = AXIS_Y - hNet;
-  const yBotLost    = yTopLost + hLost;
   const yReplBot    = AXIS_Y + hRepl;
   const yConsBot    = AXIS_Y + hCons;
   const yOnHoldBot  = AXIS_Y + hOnHold;
   const yOpenBot    = AXIS_Y + hOpen;
 
   const fmt = n => Math.round(n).toLocaleString();
-  const txtClassNewLogo = (hNewLogo >= 36) ? 'wf-bar-value-light' : 'wf-bar-value-dark';
-  const txtYNewLogo     = (hNewLogo >= 36) ? (yTopNewLogo + hNewLogo / 2 + 6) : (yTopNewLogo - 8);
-  const txtClassNet     = (hNet >= 36)     ? 'wf-bar-value-light' : 'wf-bar-value-dark';
-  const txtYNet         = (hNet >= 36)     ? (yTopNet + hNet / 2 + 6) : (yTopNet - 8);
-  const yLostBarMid     = yTopLost + hLost / 2;
+  // (Per-bar text-position calculations now happen inside the aboveBar() helper.)
 
   // "Total Added" annotation — only meaningful for the seats waterfall (Won + Replacements)
   const totalAddedY = yTopNewLogo + hNewLogo / 2;
@@ -1486,55 +1492,63 @@ function drawWaterfall(rows, mode, hostId, subId){
   const EFFORT_H    = 130;
   const EFFORT_CX   = EFFORT_X + EFFORT_W / 2;
 
+  // Helpers for individual bar slots
+  const aboveBar = (x, h, val, color, label, sign='') => {
+    const yTop = AXIS_Y - h;
+    const txtCls = h >= 36 ? 'wf-bar-value-light' : 'wf-bar-value-dark';
+    const labelCls = h >= 36 ? 'wf-bar-value-light' : 'wf-bar-value-dark';
+    const yVal = h >= 36 ? (yTop + h/2 + 6) : (yTop - 8);
+    return `
+      <rect class="${color}" x="${x}" y="${yTop}" width="${BAR_W}" height="${h}" rx="2"/>
+      <text class="wf-bar-label ${labelCls}" x="${x+BAR_W/2}" y="${yTop+22}">${label}</text>
+      <text class="wf-bar-value ${txtCls}" x="${x+BAR_W/2}" y="${yVal}">${sign}${fmt(val)}</text>`;
+  };
+  const belowBar = (x, h, val, color, label) => `
+      <rect class="${color}" x="${x}" y="${AXIS_Y}" width="${BAR_W}" height="${h}" rx="2"/>
+      <text class="wf-bar-value wf-bar-value-dark" x="${x+BAR_W/2}" y="${AXIS_Y+h/2+6}">${fmt(val)}</text>
+      <text class="wf-bar-label" x="${x+BAR_W/2}" y="${AXIS_Y+h+24}">${label}</text>`;
+  const emptyBelow = (x, label) => `
+      <text class="wf-bar-empty" x="${x+BAR_W/2}" y="${AXIS_Y+22}">${label}</text>`;
+  const emptyAbove = (x, label) => `
+      <text class="wf-bar-empty" x="${x+BAR_W/2}" y="${AXIS_Y-12}">${label}</text>`;
+
+  const noPrefix = isSeats ? 'No Seats' : 'No Clients';
+  const noOpenLabel = `${noPrefix} In Progress`;
+  const noWonLabel  = `${noPrefix} Won`;
+  const noLostLabel = `${noPrefix} Lost`;
+  const noConsLabel = isSeats ? 'No Seats Consultations' : 'No Client Consultations';
+  const noHoldLabel = `${noPrefix} On Hold`;
+  const noNetLabel  = `${noPrefix} Net`;
+  const noReplLabel = 'No Replacements';
+
   const svg = `
     <svg viewBox="0 0 ${VB_W} ${VB_H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${isSeats?'Seats':'Clients'} waterfall">
       ${showTotalAdded ? `
-      <text class="wf-total-label" x="${X1 - 12}" y="${totalAddedY - 6}" text-anchor="end">Total Added:</text>
-      <text class="wf-total-value" x="${X1 - 12}" y="${totalAddedY + 22}" text-anchor="end">${fmt(gross)}</text>
+      <text class="wf-total-label" x="${X_WON - 12}" y="${totalAddedY - 6}" text-anchor="end">Total Added:</text>
+      <text class="wf-total-value" x="${X_WON - 12}" y="${totalAddedY + 22}" text-anchor="end">${fmt(gross)}</text>
       ` : ''}
 
-      <line class="wf-conn" x1="${X1+BAR_W}" y1="${yTopNewLogo}" x2="${X2}" y2="${yTopLost}"/>
-      <line class="wf-conn" x1="${X2+BAR_W}" y1="${yBotLost}"    x2="${X3}" y2="${yTopNet}"/>
+      <!-- 1. Open / In Progress (below) -->
+      ${open > 0 ? belowBar(X_OPEN, hOpen, open, 'wf-bar-open', openLabel) : emptyBelow(X_OPEN, noOpenLabel)}
 
-      <rect class="wf-bar-new"  x="${X1}" y="${yTopNewLogo}" width="${BAR_W}" height="${hNewLogo}" rx="2"/>
-      <text class="wf-bar-label ${hNewLogo>=36?'wf-bar-value-light':'wf-bar-value-dark'}" x="${X1+BAR_W/2}" y="${yTopNewLogo+22}">${wonLabel}</text>
-      <text class="wf-bar-value ${txtClassNewLogo}" x="${X1+BAR_W/2}" y="${txtYNewLogo}">+${fmt(newLogo)}</text>
+      <!-- 2. Closed Won (above) + Replacements (below, seats only) -->
+      ${won > 0 ? aboveBar(X_WON, hNewLogo, newLogo, 'wf-bar-new', wonLabel, '+') : emptyAbove(X_WON, noWonLabel)}
+      ${isSeats ? (repls > 0 ? belowBar(X_REPL, hRepl, repls, 'wf-bar-repl', 'Seats Replaced') : emptyBelow(X_REPL, noReplLabel)) : ''}
 
-      ${lost > 0 ? `
-      <rect class="wf-bar-lost" x="${X2}" y="${yTopLost}" width="${BAR_W}" height="${hLost}" rx="2"/>
-      <text class="wf-bar-label" x="${X2+BAR_W/2}" y="${Math.max(20, yTopLost-10)}">${lostLabel}</text>
-      <text class="wf-bar-value ${hLost>=30?'wf-bar-value-light':'wf-bar-value-dark'}" x="${X2+BAR_W/2}" y="${hLost>=30 ? yLostBarMid+6 : yBotLost+22}">−${fmt(lost)}</text>
-      ` : `<text class="wf-bar-label" x="${X2+BAR_W/2}" y="${AXIS_Y-10}" fill="#999">No losses</text>`}
+      <!-- 3. Closed Lost (above) -->
+      ${lost > 0 ? aboveBar(X_LOST, hLost, lost, 'wf-bar-lost', lostLabel, '−') : emptyAbove(X_LOST, noLostLabel)}
 
-      <rect class="wf-bar-net"  x="${X3}" y="${yTopNet}" width="${BAR_W}" height="${hNet}" rx="2"/>
-      <text class="wf-bar-label ${hNet>=36?'wf-bar-value-light':'wf-bar-value-dark'}" x="${X3+BAR_W/2}" y="${yTopNet+22}">${netLabel}</text>
-      <text class="wf-bar-value ${txtClassNet}" x="${X3+BAR_W/2}" y="${txtYNet}">${fmt(net)}</text>
+      <!-- 4. Closed Consultation (below) -->
+      ${cons > 0 ? belowBar(X_CONS, hCons, cons, 'wf-bar-cons', consLabel) : emptyBelow(X_CONS, noConsLabel)}
 
+      <!-- 5. On Hold (below) -->
+      ${onHold > 0 ? belowBar(X_HOLD, hOnHold, onHold, 'wf-bar-hold', holdLabel) : emptyBelow(X_HOLD, noHoldLabel)}
+
+      <!-- 6. Net (above) -->
+      ${net > 0 ? aboveBar(X_NET, hNet, net, 'wf-bar-net', netLabel, '') : emptyAbove(X_NET, noNetLabel)}
+
+      <!-- Axis line -->
       <line class="wf-axis" x1="60" y1="${AXIS_Y}" x2="${VB_W-40}" y2="${AXIS_Y}"/>
-
-      ${repls > 0 ? `
-      <rect class="wf-bar-repl" x="${X_REPL}" y="${AXIS_Y}" width="${BAR_W}" height="${hRepl}" rx="2"/>
-      <text class="wf-bar-value wf-bar-value-dark" x="${X_REPL+BAR_W/2}" y="${AXIS_Y+hRepl/2+6}">${fmt(repls)}</text>
-      <text class="wf-bar-label" x="${X_REPL+BAR_W/2}" y="${yReplBot+24}">Seats Replaced</text>
-      ` : ''}
-
-      ${cons > 0 ? `
-      <rect class="wf-bar-cons" x="${X4}" y="${AXIS_Y}" width="${BAR_W}" height="${hCons}" rx="2"/>
-      <text class="wf-bar-value wf-bar-value-dark" x="${X4+BAR_W/2}" y="${AXIS_Y+hCons/2+6}">${fmt(cons)}</text>
-      <text class="wf-bar-label" x="${X4+BAR_W/2}" y="${yConsBot+24}">${consLabel}</text>
-      ` : ''}
-
-      ${onHold > 0 ? `
-      <rect class="wf-bar-hold" x="${X5}" y="${AXIS_Y}" width="${BAR_W}" height="${hOnHold}" rx="2"/>
-      <text class="wf-bar-value wf-bar-value-dark" x="${X5+BAR_W/2}" y="${AXIS_Y+hOnHold/2+6}">${fmt(onHold)}</text>
-      <text class="wf-bar-label" x="${X5+BAR_W/2}" y="${yOnHoldBot+24}">${holdLabel}</text>
-      ` : ''}
-
-      ${open > 0 ? `
-      <rect class="wf-bar-open" x="${X6}" y="${AXIS_Y}" width="${BAR_W}" height="${hOpen}" rx="2"/>
-      <text class="wf-bar-value wf-bar-value-dark" x="${X6+BAR_W/2}" y="${AXIS_Y+hOpen/2+6}">${fmt(open)}</text>
-      <text class="wf-bar-label" x="${X6+BAR_W/2}" y="${yOpenBot+24}">${openLabel}</text>
-      ` : ''}
 
       <!-- Total Effort summary (sum of every bar value on this chart) -->
       <rect class="wf-effort-box" x="${EFFORT_X}" y="${EFFORT_Y}" width="${EFFORT_W}" height="${EFFORT_H}" rx="6"/>
