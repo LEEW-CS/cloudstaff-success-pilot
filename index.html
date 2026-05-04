@@ -552,13 +552,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r25 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r26 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r25 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r26 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -661,7 +661,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r25</div>
+      <div class="rail-version">v1 r26</div>
     </div>
   </aside>
 
@@ -796,7 +796,7 @@ table.opps tr:hover td{ background:#fafbfd }
         </div>
       </div>
 
-      <!-- Insights row (v1 r25): Win Rate trend + Closed Lost Reasons -->
+      <!-- Insights row (v1 r26): Win Rate trend + Closed Lost Reasons -->
       <div class="charts-row-2">
         <div class="chart-card">
           <div class="chart-title">Win Rate Trend</div>
@@ -810,19 +810,20 @@ table.opps tr:hover td{ background:#fafbfd }
         </div>
       </div>
 
-      <!-- Engagement Depth (full width, needs horizontal space for bucket categories) -->
+      <!-- Activity Logging Coverage by SP -->
       <div class="card">
         <div class="card-head">
           <div>
-            <div class="card-title">Engagement Depth vs Outcomes</div>
-            <div class="muted" style="font-size:12px;margin-top:2px">
-              Each closed opportunity bucketed by total touchpoints (SME calls + paper sourcing + interviews + KPIs + onboarding).
-              Green = Won, red = Lost. The win-rate label on top tests whether deeper SP engagement actually improves outcomes.
+            <div class="card-title">Activity Logging Coverage by Success Pilot</div>
+            <div class="muted" style="font-size:12px;margin-top:2px;max-width:780px;line-height:1.5">
+              Share of opportunities where <b>any</b> activity column is greater than zero
+              (SME calls, paper sourcing, candidate interviews, customer interviews, KPIs, MyStaff onboarding).
+              Sorted lowest-first — focus your coaching there. <b>SP filter is ignored</b> on this chart so you can compare across the team.
             </div>
           </div>
         </div>
         <div class="card-body">
-          <div class="chart-canvas-wrap" style="height:280px"><canvas id="ch-depth"></canvas></div>
+          <div class="chart-canvas-wrap" style="height:280px"><canvas id="ch-coverage"></canvas></div>
         </div>
       </div>
 
@@ -1153,7 +1154,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r25";
+const APP_VERSION   = "v1 r26";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1352,7 +1353,7 @@ async function sendResetCode(){
   btn.disabled = false; btn.textContent = 'Send Reset Code';
 }
 
-// Renamed in v1 r25 — collided with the admin password-reset modal handler
+// Renamed in v1 r26 — collided with the admin password-reset modal handler
 // of the same name defined later in the file (last-declared-wins). The login
 // flow now uses submitLoginPasswordReset; the admin modal keeps the original.
 async function submitLoginPasswordReset(){
@@ -1584,7 +1585,7 @@ function renderDashboard(){
   const f = getDashFilters();
   const rows = applyDashFilters(visibleOpps(), f);
 
-  // (KPI tile row was removed in v1 r25 — the waterfalls now carry the
+  // (KPI tile row was removed in v1 r26 — the waterfalls now carry the
   // headline metrics. drawWaterfall computes its own counts.)
 
   // Pies
@@ -1634,10 +1635,10 @@ function renderDashboard(){
   drawWaterfall(rows, 'clients', 'wf-chart-clients', 'dash-wf-sub-clients');
   drawWaterfall(rows, 'seats',   'wf-chart-seats',   'dash-wf-sub-seats');
 
-  // Insights (v1 r25)
+  // Insights (v1 r26/r26)
   drawWinRateTrend(rows, f);
   drawClosedLostReasons(rows);
-  drawEngagementDepth(rows);
+  drawActivityCoverage(allOpps, f);
 }
 
 /* ─────────── Win Rate Trend (line chart) ───────────
@@ -1767,101 +1768,121 @@ function drawClosedLostReasons(rows){
   });
 }
 
-/* ─────────── Engagement Depth vs Outcomes (stacked bar) ───────────
- * For each CLOSED opportunity, sum the activity columns (SME calls +
- * paper sourcing + interviews + customer interviews + KPIs + onboarding)
- * to get a "touchpoints" depth. Bucket the depths and stack Won/Lost.
- * The win-rate % label on top of each bar tells the punchline:
- * does deeper SP engagement actually improve outcomes?
+/* ─────────── Activity Logging Coverage by SP (horizontal stacked bar) ───────────
+ * For each Success Pilot, what share of their opps has ANY activity column
+ * populated (> 0)? Lowest-coverage SPs sorted to the top so they get the
+ * coaching attention. SP filter is intentionally ignored — this chart is
+ * about cross-SP comparison. Year/Month/Status filters do apply.
  */
-function drawEngagementDepth(rows){
-  const id = 'ch-depth';
+function drawActivityCoverage(allRowsArg, f){
+  const id = 'ch-coverage';
   charts[id]?.destroy?.();
   if (!$(id)) return;
-  const closed = rows.filter(r =>
-    r.current_status === 'Closed / Won' || r.current_status === 'Closed / Lost');
+  // Apply Year/Month/Status filters but NOT SP — we want to compare across SPs
+  const scopedRows = applyDashFilters(allRowsArg, { sp:'', year: f.year, month: f.month, status: f.status });
 
-  const depth = (r) =>
-    num(r.sme_customer_calls) + num(r.candidate_paper_sourcing) +
-    num(r.candidate_interviews) + num(r.customer_candidate_interviews) +
-    num(r.set_client_team_metrics_kpis) + num(r.client_mystaff_tutorial_onboarding);
+  const hasActivity = (r) =>
+    num(r.sme_customer_calls) > 0 ||
+    num(r.candidate_paper_sourcing) > 0 ||
+    num(r.candidate_interviews) > 0 ||
+    num(r.customer_candidate_interviews) > 0 ||
+    num(r.set_client_team_metrics_kpis) > 0 ||
+    num(r.client_mystaff_tutorial_onboarding) > 0;
 
-  const buckets = ['0', '1', '2', '3–5', '6–10', '11+'];
-  const which = (d) => d===0?'0' : d===1?'1' : d===2?'2' : d<=5?'3–5' : d<=10?'6–10' : '11+';
-  const bData = Object.fromEntries(buckets.map(b => [b, { won:0, lost:0 }]));
-  closed.forEach(r => {
-    const b = which(depth(r));
-    if (r.current_status === 'Closed / Won') bData[b].won++;
-    else bData[b].lost++;
+  const bySp = {};
+  scopedRows.forEach(r => {
+    const sp = (r.sp || '').trim() || '(unattributed)';
+    if (!bySp[sp]) bySp[sp] = { total: 0, logged: 0 };
+    bySp[sp].total++;
+    if (hasActivity(r)) bySp[sp].logged++;
   });
-  const wonData  = buckets.map(b => bData[b].won);
-  const lostData = buckets.map(b => bData[b].lost);
-  const totals   = buckets.map(b => bData[b].won + bData[b].lost);
-  const winRates = buckets.map(b => {
-    const t = bData[b].won + bData[b].lost;
-    return t > 0 ? Math.round(bData[b].won / t * 100) : null;
-  });
+
+  // Build sorted list (lowest coverage first), drop SPs with no opps
+  const entries = Object.entries(bySp)
+    .filter(([_, v]) => v.total > 0)
+    .map(([sp, v]) => ({
+      sp,
+      isFormer: SP_FORMER_SET.has(sp),
+      total: v.total,
+      logged: v.logged,
+      missing: v.total - v.logged,
+      pct: Math.round(v.logged / v.total * 100),
+    }))
+    .sort((a, b) => a.pct - b.pct);
 
   const ctx = $(id).getContext('2d');
-  // Plugin: render the win-rate % label on top of each stacked bar
-  const winRateLabelPlugin = {
-    id: 'winRateLabel',
+  if (entries.length === 0) {
+    charts[id] = new Chart(ctx, {
+      type:'bar', data:{labels:['(no opps in selection)'], datasets:[{data:[0]}]},
+      options:{indexAxis:'y', plugins:{legend:{display:false}}}
+    });
+    return;
+  }
+
+  const labels    = entries.map(e => e.isFormer ? `${e.sp} · former` : e.sp);
+  const loggedDs  = entries.map(e => e.logged);
+  const missingDs = entries.map(e => e.missing);
+  const pcts      = entries.map(e => e.pct);
+  const totals    = entries.map(e => e.total);
+
+  // Plugin: render the percentage to the right of each bar.
+  const pctLabelPlugin = {
+    id: 'coveragePctLabel',
     afterDatasetsDraw(chart) {
       const { ctx: c, scales: { x, y } } = chart;
       c.save();
-      c.font = '600 12px Inter, sans-serif';
-      c.fillStyle = '#0f172a';
-      c.textAlign = 'center';
-      buckets.forEach((b, i) => {
-        const total = totals[i];
-        const rate = winRates[i];
-        if (total === 0) return;
-        const xc = x.getPixelForValue(i);
-        const yTop = y.getPixelForValue(total);
-        c.fillText(`${rate}%`, xc, yTop - 8);
-        c.font = '500 10px JetBrains Mono, monospace';
+      c.font = '700 12px Inter, sans-serif';
+      c.textAlign = 'left';
+      c.textBaseline = 'middle';
+      entries.forEach((e, i) => {
+        const xEnd = x.getPixelForValue(e.total);
+        const yc   = y.getPixelForValue(i);
+        // Color the percentage by tier
+        c.fillStyle = e.pct >= 70 ? '#047857'
+                    : e.pct >= 40 ? '#b45309'
+                    :               '#b91c1c';
+        c.fillText(`  ${e.pct}%`, xEnd, yc);
+        // Smaller "logged / total" beside it
+        c.font = '500 10.5px JetBrains Mono, monospace';
         c.fillStyle = '#64748b';
-        c.fillText(`n=${total}`, xc, yTop - 22);
-        c.font = '600 12px Inter, sans-serif';
-        c.fillStyle = '#0f172a';
+        const w = c.measureText(`  ${e.pct}%`).width;
+        c.fillText(`  ${e.logged}/${e.total}`, xEnd + w, yc);
+        c.font = '700 12px Inter, sans-serif';
       });
       c.restore();
     }
   };
+
   charts[id] = new Chart(ctx, {
     type:'bar',
     data:{
-      labels: buckets,
+      labels,
       datasets:[
-        { label:'Won',  data: wonData,  backgroundColor:'#10b981', borderRadius:4, stack:'1' },
-        { label:'Lost', data: lostData, backgroundColor:'#ef4444', borderRadius:4, stack:'1' },
+        { label:'Activity logged',     data: loggedDs,  backgroundColor:'#10b981', borderRadius:4, stack:'1' },
+        { label:'No activity recorded', data: missingDs, backgroundColor:'#e2e8f0', borderRadius:4, stack:'1' },
       ]
     },
     options:{
-      responsive:true, maintainAspectRatio:false,
-      layout:{ padding:{ top:36 } },  // headroom for the % label
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ right:90 } },   // headroom for the % + n/total labels
       plugins:{
         legend:{ position:'bottom', labels:{font:{family:'Inter',size:11.5}} },
         tooltip:{
           callbacks:{
             footer:(items) => {
               const i = items[0].dataIndex;
-              const t = totals[i];
-              return t > 0 ? `Win rate: ${winRates[i]}% of ${t} closed opps` : '';
+              const e = entries[i];
+              return `${e.pct}% logged · ${e.logged} of ${e.total} opps`;
             }
           }
         }
       },
       scales:{
-        x:{
-          stacked:true,
-          title:{ display:true, text:'Touchpoints per opportunity', font:{family:'Inter',size:11.5,weight:'500'}, color:'#475569' },
-          ticks:{font:{family:'JetBrains Mono',size:11}}
-        },
-        y:{ stacked:true, beginAtZero:true, ticks:{font:{family:'JetBrains Mono',size:10}} }
+        x:{ stacked:true, beginAtZero:true, ticks:{font:{family:'JetBrains Mono',size:10}}, grid:{color:'rgba(0,0,0,.05)'} },
+        y:{ stacked:true, ticks:{ font:{family:'Inter',size:11.5}, autoSkip:false } }
       }
     },
-    plugins:[winRateLabelPlugin]
+    plugins:[pctLabelPlugin]
   });
 }
 
@@ -1912,7 +1933,7 @@ function drawWaterfall(rows, mode, hostId, subId){
   }
 
   // SVG geometry — viewBox 1300, axis at y=320.
-  // New left-to-right order (v1 r25):
+  // New left-to-right order (v1 r26):
   //   1. Open / In Progress (below axis)
   //   2. Closed Won (above) + Replacements (below, seats only)
   //   3. Closed Lost — sits ON TOP of Net (true waterfall step-down)
