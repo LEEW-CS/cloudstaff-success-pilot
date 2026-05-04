@@ -552,13 +552,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r24 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r25 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r24 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r25 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -661,7 +661,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r24</div>
+      <div class="rail-version">v1 r25</div>
     </div>
   </aside>
 
@@ -793,6 +793,36 @@ table.opps tr:hover td{ background:#fafbfd }
         <div class="chart-card">
           <div class="chart-title">Engagement Status by Client Count</div>
           <div class="chart-canvas-wrap"><canvas id="ch-status"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Insights row (v1 r25): Win Rate trend + Closed Lost Reasons -->
+      <div class="charts-row-2">
+        <div class="chart-card">
+          <div class="chart-title">Win Rate Trend</div>
+          <div class="muted" style="font-size:11px;margin-top:-4px;margin-bottom:8px">Monthly win rate = Won ÷ (Won + Lost). Months with no closed opps are skipped.</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-winrate"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Closed Lost Reasons</div>
+          <div class="muted" style="font-size:11px;margin-top:-4px;margin-bottom:8px">Top reasons we lose — actionable signal for sales/AM coaching.</div>
+          <div class="chart-canvas-wrap"><canvas id="ch-lost-reasons"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Engagement Depth (full width, needs horizontal space for bucket categories) -->
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Engagement Depth vs Outcomes</div>
+            <div class="muted" style="font-size:12px;margin-top:2px">
+              Each closed opportunity bucketed by total touchpoints (SME calls + paper sourcing + interviews + KPIs + onboarding).
+              Green = Won, red = Lost. The win-rate label on top tests whether deeper SP engagement actually improves outcomes.
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart-canvas-wrap" style="height:280px"><canvas id="ch-depth"></canvas></div>
         </div>
       </div>
 
@@ -1123,7 +1153,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r24";
+const APP_VERSION   = "v1 r25";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1322,7 +1352,7 @@ async function sendResetCode(){
   btn.disabled = false; btn.textContent = 'Send Reset Code';
 }
 
-// Renamed in v1 r24 — collided with the admin password-reset modal handler
+// Renamed in v1 r25 — collided with the admin password-reset modal handler
 // of the same name defined later in the file (last-declared-wins). The login
 // flow now uses submitLoginPasswordReset; the admin modal keeps the original.
 async function submitLoginPasswordReset(){
@@ -1554,7 +1584,7 @@ function renderDashboard(){
   const f = getDashFilters();
   const rows = applyDashFilters(visibleOpps(), f);
 
-  // (KPI tile row was removed in v1 r24 — the waterfalls now carry the
+  // (KPI tile row was removed in v1 r25 — the waterfalls now carry the
   // headline metrics. drawWaterfall computes its own counts.)
 
   // Pies
@@ -1603,6 +1633,236 @@ function renderDashboard(){
   // SP Opportunity Involvement — two waterfalls (clients + seats)
   drawWaterfall(rows, 'clients', 'wf-chart-clients', 'dash-wf-sub-clients');
   drawWaterfall(rows, 'seats',   'wf-chart-seats',   'dash-wf-sub-seats');
+
+  // Insights (v1 r25)
+  drawWinRateTrend(rows, f);
+  drawClosedLostReasons(rows);
+  drawEngagementDepth(rows);
+}
+
+/* ─────────── Win Rate Trend (line chart) ───────────
+ * Monthly win rate = Won / (Won + Lost). Skips months with no closed opps.
+ * Respects SP/Year/Month filters from the dashboard.
+ */
+function drawWinRateTrend(rows, f){
+  const id = 'ch-winrate';
+  charts[id]?.destroy?.();
+  if (!$(id)) return;
+  // Group closed opps by month
+  const byMonth = {};
+  rows.forEach(r => {
+    const d = r.engagement_start_date;
+    if (!d) return;
+    const ym = d.slice(0,7);
+    if (!byMonth[ym]) byMonth[ym] = { won:0, lost:0 };
+    if (r.current_status === 'Closed / Won')  byMonth[ym].won++;
+    if (r.current_status === 'Closed / Lost') byMonth[ym].lost++;
+  });
+  const months = Object.keys(byMonth).sort().filter(m => byMonth[m].won + byMonth[m].lost > 0);
+  if (months.length === 0) {
+    const ctx = $(id).getContext('2d');
+    charts[id] = new Chart(ctx, {
+      type:'line', data:{labels:['(no closed opps)'], datasets:[{data:[null]}]},
+      options:{plugins:{legend:{display:false}}}
+    });
+    return;
+  }
+  const labels = months.map(m => {
+    const [y, mm] = m.split('-');
+    return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mm,10)-1]} ${y.slice(2)}`;
+  });
+  const data = months.map(m => {
+    const { won, lost } = byMonth[m];
+    return Math.round(won / (won + lost) * 100);
+  });
+  const counts = months.map(m => byMonth[m].won + byMonth[m].lost);
+  const overallWin = data.reduce((a,b) => a+b, 0) / data.length;
+
+  const ctx = $(id).getContext('2d');
+  charts[id] = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        data,
+        borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.1)',
+        borderWidth:2.5, tension:0.25, pointRadius:4, pointBackgroundColor:'#10b981',
+        pointBorderColor:'#fff', pointBorderWidth:2, fill:true,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:(c) => {
+              const m = months[c.dataIndex];
+              const { won, lost } = byMonth[m];
+              return `Win rate: ${c.parsed.y}%  (${won} won / ${won+lost} closed)`;
+            }
+          }
+        },
+      },
+      scales:{
+        x:{ ticks:{font:{family:'Inter',size:10}} },
+        y:{
+          beginAtZero:true, max:100,
+          ticks:{ font:{family:'JetBrains Mono',size:10}, callback:(v)=>v+'%' },
+          grid:{ color:'rgba(0,0,0,.05)' },
+        }
+      }
+    }
+  });
+}
+
+/* ─────────── Closed Lost Reasons (horizontal bar) ───────────
+ * Tallies the closed_lost_reasons field across all Closed/Lost opps.
+ */
+function drawClosedLostReasons(rows){
+  const id = 'ch-lost-reasons';
+  charts[id]?.destroy?.();
+  if (!$(id)) return;
+  const lostRows = rows.filter(r => r.current_status === 'Closed / Lost');
+  const counts = {};
+  lostRows.forEach(r => {
+    const reason = (r.closed_lost_reasons || '').trim() || '(none recorded)';
+    counts[reason] = (counts[reason] || 0) + 1;
+  });
+  const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 8);
+  const labels = sorted.map(e => e[0]);
+  const data   = sorted.map(e => e[1]);
+
+  const ctx = $(id).getContext('2d');
+  if (sorted.length === 0) {
+    charts[id] = new Chart(ctx, {
+      type:'bar', data:{labels:['(no lost opps in selection)'], datasets:[{data:[0]}]},
+      options:{indexAxis:'y', plugins:{legend:{display:false}}}
+    });
+    return;
+  }
+  // Red gradient by rank (darkest = top reason)
+  const reds = ['#991b1b','#b91c1c','#dc2626','#ef4444','#f87171','#fca5a5','#fecaca','#fee2e2'];
+  charts[id] = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ data, backgroundColor: labels.map((_,i)=>reds[i]||'#fee2e2'), borderRadius:4 }] },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:(c) => {
+              const total = data.reduce((a,b)=>a+b,0);
+              return `${c.parsed.x} losses (${(c.parsed.x/total*100).toFixed(0)}% of all losses)`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{ beginAtZero:true, ticks:{font:{family:'JetBrains Mono',size:10}} },
+        y:{ ticks:{ font:{family:'Inter',size:10.5}, autoSkip:false } }
+      }
+    }
+  });
+}
+
+/* ─────────── Engagement Depth vs Outcomes (stacked bar) ───────────
+ * For each CLOSED opportunity, sum the activity columns (SME calls +
+ * paper sourcing + interviews + customer interviews + KPIs + onboarding)
+ * to get a "touchpoints" depth. Bucket the depths and stack Won/Lost.
+ * The win-rate % label on top of each bar tells the punchline:
+ * does deeper SP engagement actually improve outcomes?
+ */
+function drawEngagementDepth(rows){
+  const id = 'ch-depth';
+  charts[id]?.destroy?.();
+  if (!$(id)) return;
+  const closed = rows.filter(r =>
+    r.current_status === 'Closed / Won' || r.current_status === 'Closed / Lost');
+
+  const depth = (r) =>
+    num(r.sme_customer_calls) + num(r.candidate_paper_sourcing) +
+    num(r.candidate_interviews) + num(r.customer_candidate_interviews) +
+    num(r.set_client_team_metrics_kpis) + num(r.client_mystaff_tutorial_onboarding);
+
+  const buckets = ['0', '1', '2', '3–5', '6–10', '11+'];
+  const which = (d) => d===0?'0' : d===1?'1' : d===2?'2' : d<=5?'3–5' : d<=10?'6–10' : '11+';
+  const bData = Object.fromEntries(buckets.map(b => [b, { won:0, lost:0 }]));
+  closed.forEach(r => {
+    const b = which(depth(r));
+    if (r.current_status === 'Closed / Won') bData[b].won++;
+    else bData[b].lost++;
+  });
+  const wonData  = buckets.map(b => bData[b].won);
+  const lostData = buckets.map(b => bData[b].lost);
+  const totals   = buckets.map(b => bData[b].won + bData[b].lost);
+  const winRates = buckets.map(b => {
+    const t = bData[b].won + bData[b].lost;
+    return t > 0 ? Math.round(bData[b].won / t * 100) : null;
+  });
+
+  const ctx = $(id).getContext('2d');
+  // Plugin: render the win-rate % label on top of each stacked bar
+  const winRateLabelPlugin = {
+    id: 'winRateLabel',
+    afterDatasetsDraw(chart) {
+      const { ctx: c, scales: { x, y } } = chart;
+      c.save();
+      c.font = '600 12px Inter, sans-serif';
+      c.fillStyle = '#0f172a';
+      c.textAlign = 'center';
+      buckets.forEach((b, i) => {
+        const total = totals[i];
+        const rate = winRates[i];
+        if (total === 0) return;
+        const xc = x.getPixelForValue(i);
+        const yTop = y.getPixelForValue(total);
+        c.fillText(`${rate}%`, xc, yTop - 8);
+        c.font = '500 10px JetBrains Mono, monospace';
+        c.fillStyle = '#64748b';
+        c.fillText(`n=${total}`, xc, yTop - 22);
+        c.font = '600 12px Inter, sans-serif';
+        c.fillStyle = '#0f172a';
+      });
+      c.restore();
+    }
+  };
+  charts[id] = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: buckets,
+      datasets:[
+        { label:'Won',  data: wonData,  backgroundColor:'#10b981', borderRadius:4, stack:'1' },
+        { label:'Lost', data: lostData, backgroundColor:'#ef4444', borderRadius:4, stack:'1' },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:36 } },  // headroom for the % label
+      plugins:{
+        legend:{ position:'bottom', labels:{font:{family:'Inter',size:11.5}} },
+        tooltip:{
+          callbacks:{
+            footer:(items) => {
+              const i = items[0].dataIndex;
+              const t = totals[i];
+              return t > 0 ? `Win rate: ${winRates[i]}% of ${t} closed opps` : '';
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          stacked:true,
+          title:{ display:true, text:'Touchpoints per opportunity', font:{family:'Inter',size:11.5,weight:'500'}, color:'#475569' },
+          ticks:{font:{family:'JetBrains Mono',size:11}}
+        },
+        y:{ stacked:true, beginAtZero:true, ticks:{font:{family:'JetBrains Mono',size:10}} }
+      }
+    },
+    plugins:[winRateLabelPlugin]
+  });
 }
 
 /* ─────────── Waterfall (dual-mode: clients or seats) ───────────
@@ -1652,7 +1912,7 @@ function drawWaterfall(rows, mode, hostId, subId){
   }
 
   // SVG geometry — viewBox 1300, axis at y=320.
-  // New left-to-right order (v1 r24):
+  // New left-to-right order (v1 r25):
   //   1. Open / In Progress (below axis)
   //   2. Closed Won (above) + Replacements (below, seats only)
   //   3. Closed Lost — sits ON TOP of Net (true waterfall step-down)
