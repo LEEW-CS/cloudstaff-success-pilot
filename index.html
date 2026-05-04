@@ -552,13 +552,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r23 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r24 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r23 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r24 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -661,7 +661,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r23</div>
+      <div class="rail-version">v1 r24</div>
     </div>
   </aside>
 
@@ -715,9 +715,10 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="card" style="background:transparent;border:none;box-shadow:none;padding:0">
         <div style="margin:0 0 8px 4px">
           <div class="card-title" style="font-family:var(--font-serif, var(--font-sans));font-size:18px">Success Pilot Opportunity Involvement</div>
-          <div class="muted" style="font-size:12.5px;margin-top:2px;max-width:680px;line-height:1.5">
-            Opportunities won, lost, and replaced where a Success Pilot has provided assistance.
-            Success is always a group collaboration with New Logo Sales and Growth Managers.
+          <div class="muted" style="font-size:12.5px;margin-top:2px;max-width:760px;line-height:1.5">
+            This view tracks Success Pilot involvement in client opportunities led by New Logo Sales or Growth
+            Managers. Wins and losses are collective outcomes, not individual results. Collaboration across all
+            three roles is standard practice when a Success Pilot is invited to participate.
           </div>
         </div>
       </div>
@@ -1122,7 +1123,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r23";
+const APP_VERSION   = "v1 r24";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1321,7 +1322,7 @@ async function sendResetCode(){
   btn.disabled = false; btn.textContent = 'Send Reset Code';
 }
 
-// Renamed in v1 r23 — collided with the admin password-reset modal handler
+// Renamed in v1 r24 — collided with the admin password-reset modal handler
 // of the same name defined later in the file (last-declared-wins). The login
 // flow now uses submitLoginPasswordReset; the admin modal keeps the original.
 async function submitLoginPasswordReset(){
@@ -1553,7 +1554,7 @@ function renderDashboard(){
   const f = getDashFilters();
   const rows = applyDashFilters(visibleOpps(), f);
 
-  // (KPI tile row was removed in v1 r23 — the waterfalls now carry the
+  // (KPI tile row was removed in v1 r24 — the waterfalls now carry the
   // headline metrics. drawWaterfall computes its own counts.)
 
   // Pies
@@ -1651,7 +1652,7 @@ function drawWaterfall(rows, mode, hostId, subId){
   }
 
   // SVG geometry — viewBox 1300, axis at y=320.
-  // New left-to-right order (v1 r23):
+  // New left-to-right order (v1 r24):
   //   1. Open / In Progress (below axis)
   //   2. Closed Won (above) + Replacements (below, seats only)
   //   3. Closed Lost — sits ON TOP of Net (true waterfall step-down)
