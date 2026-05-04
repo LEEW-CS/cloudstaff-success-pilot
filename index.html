@@ -108,6 +108,16 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
   cursor:pointer; padding:0; text-decoration:underline; font-family:inherit;
 }
 .btn-link:hover{ color:#1d4ed8 }
+.login-success{
+  background:#f0fdf4; border:1px solid #bbf7d0; color:#166534;
+  padding:.75rem 1rem; border-radius:8px; margin-bottom:1rem; font-size:.875rem;
+  display:none;
+}
+.login-success.visible{ display:block }
+.login-error.visible{ display:block }
+/* In-place 3-panel switching */
+.login-panel{ display:none }
+.login-panel.active{ display:block }
 
 /* ============= APP SHELL ============= */
 .app{ display:grid; grid-template-columns:240px 1fr; min-height:100vh; transition:grid-template-columns .2s ease }
@@ -441,6 +451,70 @@ table.opps tr:hover td{ background:#fafbfd }
 
 /* misc */
 .empty-state{ padding:40px; text-align:center; color:var(--ink-500); font-size:13px }
+
+/* ============= MOBILE — collapse rail to header bar, tighten layout ============= */
+@media (max-width: 768px) {
+  /* Rail shrinks to a fixed top bar */
+  .app{ display:flex; flex-direction:column; min-height:100vh }
+  .rail{
+    position:sticky; top:0; height:auto;
+    flex-direction:row; flex-wrap:wrap; align-items:center;
+    padding:8px 10px; overflow:visible;
+  }
+  .rail-head{
+    grid-template-columns:auto 1fr auto; padding:0; border:none; margin:0;
+    column-gap:10px; row-gap:0; flex:1 1 100%;
+  }
+  .rail-head .brand{ font-size:13px }
+  .rail-head .brand span{ display:none }
+  .rail-head .dbstatus{ display:none }
+  .rail-burger{ width:34px; height:34px }
+  /* Hide nav by default on mobile; toggle via burger -> rail-collapsed swap */
+  .rail-label,
+  .rail-item,
+  .rail-foot{ display:none }
+  .app.mobile-rail-open .rail{ flex-direction:column; align-items:stretch }
+  .app.mobile-rail-open .rail-label,
+  .app.mobile-rail-open .rail-item,
+  .app.mobile-rail-open .rail-foot{ display:flex; flex:1 1 100% }
+  .app.mobile-rail-open .rail-label{ display:block }
+
+  /* Topbar + main */
+  .topbar{ padding:0 14px; height:48px }
+  .topbar-title{ font-size:14px }
+  .topbar-pill{ display:none }
+  .page-body{ padding:14px; gap:14px }
+  .card-body{ padding:14px }
+  .card-head{ padding:12px 14px; flex-wrap:wrap }
+  .card-sub{ font-size:11px }
+
+  /* Charts collapse to 1 column at mobile */
+  .charts-row, .charts-row-2{ grid-template-columns:1fr !important }
+  .chart-canvas-wrap{ height:200px }
+
+  /* Tables become horizontally scrollable; reduce font slightly */
+  table.opps{ font-size:11.5px }
+  table.opps td, table.opps th{ padding:7px 8px }
+  .table-wrap{ -webkit-overflow-scrolling:touch }
+
+  /* Filter row: stack vertically with full-width controls */
+  .filters{ flex-direction:column; align-items:stretch; gap:10px }
+  .filter{ min-width:0 }
+  .filter select, .filter input{ width:100% }
+
+  /* Form grid: single column */
+  .form-grid{ grid-template-columns:1fr !important }
+
+  /* Modals: nearly full-screen */
+  .modal{ max-width:100%; max-height:100vh; border-radius:0 }
+
+  /* Login card: full width with smaller padding */
+  .login-card{ padding:1.75rem 1.5rem; border-radius:12px }
+  .login-logo img{ width:160px }
+
+  /* Waterfall: keep SVG aspect ratio, no horizontal overflow */
+  .waterfall-card svg{ width:100% }
+}
 .spinner{ display:inline-block; width:14px; height:14px; border:2px solid var(--ink-300); border-top-color:var(--accent-500); border-radius:50%; animation:spin .7s linear infinite }
 @keyframes spin{ to{ transform:rotate(360deg) } }
 .muted{ color:var(--ink-500) }
@@ -478,33 +552,73 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r21 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r22 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r21 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r22 modular · build 2026-05-01</div>
       </div>
     </div>
 
-    <div id="login-error" class="login-error" style="display:none"></div>
-    <form id="login-form">
+    <!-- Panel 1: Sign In -->
+    <div class="login-panel active" id="panel-signin">
+      <div id="login-error" class="login-error" style="display:none"></div>
+      <form id="login-form">
+        <div class="login-field">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="Enter your email" autocomplete="username" required>
+        </div>
+        <div class="login-field">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" id="login-btn" class="login-btn">Sign In</button>
+        <div class="login-footer">
+          <button class="btn-link" type="button" id="show-forgot-btn">Forgot password?</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Panel 2: Request reset code -->
+    <div class="login-panel" id="panel-forgot">
+      <p style="font-size:.875rem;color:#64748b;margin-bottom:1.25rem">Enter your email address. A 6-digit reset code will be generated for you.</p>
+      <div class="login-error" id="forgot-error" style="display:none"></div>
+      <div class="login-success" id="forgot-success" style="display:none"></div>
       <div class="login-field">
-        <label for="login-email">Email</label>
-        <input type="email" id="login-email" placeholder="Enter your email" autocomplete="username" required>
+        <label for="forgot-email">Email Address</label>
+        <input type="email" id="forgot-email" placeholder="you@cloudstaff.com" autocomplete="off">
       </div>
-      <div class="login-field">
-        <label for="login-password">Password</label>
-        <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" required>
-      </div>
-      <button type="submit" id="login-btn" class="login-btn">Sign In</button>
+      <button class="login-btn" type="button" id="forgot-btn">Send Reset Code</button>
       <div class="login-footer">
-        <button class="btn-link" type="button" id="show-forgot-btn"
-                title="Contact Lee Wade for an admin-initiated password reset"
-                onclick="event.preventDefault();alert('Password resets are admin-initiated. Please contact Lee Wade to reset your password.');">Forgot password?</button>
+        <button class="btn-link" type="button" id="back-to-signin1">&larr; Back to Sign In</button>
       </div>
-    </form>
+    </div>
+
+    <!-- Panel 3: Enter code + new password -->
+    <div class="login-panel" id="panel-reset">
+      <p style="font-size:.875rem;color:#64748b;margin-bottom:1.25rem">Enter the 6-digit code, then choose a new password.</p>
+      <div class="login-error" id="reset-error" style="display:none"></div>
+      <div class="login-success" id="reset-success" style="display:none"></div>
+      <div class="login-field">
+        <label for="reset-code">Reset Code</label>
+        <input type="text" id="reset-code" placeholder="6-digit code" maxlength="6"
+               style="letter-spacing:.2em;font-family:var(--font-mono);font-size:1.1rem;text-align:center" autocomplete="off">
+      </div>
+      <div class="login-field">
+        <label for="reset-new-pw">New Password</label>
+        <input type="password" id="reset-new-pw" placeholder="Enter new password" autocomplete="new-password" minlength="8">
+      </div>
+      <div class="login-field">
+        <label for="reset-confirm-pw">Confirm Password</label>
+        <input type="password" id="reset-confirm-pw" placeholder="Confirm new password" autocomplete="new-password" minlength="8">
+      </div>
+      <button class="login-btn" type="button" id="reset-btn">Reset Password</button>
+      <div class="login-footer">
+        <button class="btn-link" type="button" id="back-to-forgot">&larr; Resend code</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -547,7 +661,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r21</div>
+      <div class="rail-version">v1 r22</div>
     </div>
   </aside>
 
@@ -1008,7 +1122,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r21";
+const APP_VERSION   = "v1 r22";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1128,6 +1242,11 @@ function logout(){
 
 function toggleRail(){
   const app = document.querySelector('.app');
+  // Mobile (< 768px): toggle the slide-out drawer instead of the desktop collapse.
+  if (window.matchMedia('(max-width: 768px)').matches) {
+    app.classList.toggle('mobile-rail-open');
+    return;
+  }
   const collapsed = app.classList.toggle('rail-collapsed');
   try { localStorage.setItem('sp_rail_collapsed', collapsed ? '1' : '0'); } catch {}
   // Charts reflow after the grid resizes
@@ -1139,6 +1258,109 @@ function applyRailStateFromStorage(){
       document.querySelector('.app').classList.add('rail-collapsed');
     }
   } catch {}
+}
+
+/* ========================================================
+   PASSWORD RESET — 3-panel flow (Sign In → Forgot → Reset)
+   Mirrors the Client Research tool. Reset codes stored in
+   sp_users (reset_code + reset_code_expires_at columns).
+   DEV MODE: code is shown via alert() until EmailJS is wired up.
+   ======================================================== */
+function showLoginPanel(name){
+  ['signin','forgot','reset'].forEach(p => {
+    const el = document.getElementById('panel-'+p);
+    if (el) el.classList.toggle('active', p === name);
+  });
+}
+
+async function sendResetCode(){
+  const email = $('forgot-email').value.trim().toLowerCase();
+  const errEl = $('forgot-error');
+  const sucEl = $('forgot-success');
+  const btn   = $('forgot-btn');
+  errEl.style.display = 'none'; errEl.classList.remove('visible');
+  sucEl.style.display = 'none'; sucEl.classList.remove('visible');
+
+  if (!email || !email.includes('@')) {
+    errEl.textContent = 'Please enter a valid email address.';
+    errEl.style.display = 'block'; errEl.classList.add('visible');
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    // Look up user — but ALWAYS show the success/code panel either way
+    // (avoids leaking whether an email is registered).
+    const rows = await sb('GET', `sp_users?email=eq.${encodeURIComponent(email)}&select=id`);
+    let code = null;
+    if (rows && rows.length) {
+      code = String(Math.floor(100000 + Math.random() * 900000));
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      await sb('PATCH', `sp_users?id=eq.${rows[0].id}`,
+        { reset_code: code, reset_code_expires_at: expiresAt }, 'return=minimal');
+      // [DEV MODE] Replace this alert with EmailJS once configured.
+      alert(`[DEV MODE] Reset code for ${email}: ${code}\n\nConfigure EmailJS to send real emails.`);
+    }
+
+    // Move to reset panel
+    $('reset-code').value = '';
+    $('reset-new-pw').value = '';
+    $('reset-confirm-pw').value = '';
+    const rsuc = $('reset-success'); const rerr = $('reset-error');
+    rerr.style.display = 'none'; rerr.classList.remove('visible');
+    rsuc.textContent = code
+      ? `Reset code generated for ${email}. Enter it below — it expires in 15 minutes.`
+      : `If an account exists for ${email}, a reset code was generated. Contact your admin if you don't receive it.`;
+    rsuc.style.display = 'block'; rsuc.classList.add('visible');
+    showLoginPanel('reset');
+    setTimeout(() => $('reset-code').focus(), 50);
+  } catch (e) {
+    errEl.textContent = 'Request failed: ' + e.message;
+    errEl.style.display = 'block'; errEl.classList.add('visible');
+  }
+  btn.disabled = false; btn.textContent = 'Send Reset Code';
+}
+
+async function submitPasswordReset(){
+  const email = $('forgot-email').value.trim().toLowerCase();
+  const code  = $('reset-code').value.trim();
+  const pw1   = $('reset-new-pw').value;
+  const pw2   = $('reset-confirm-pw').value;
+  const errEl = $('reset-error');
+  const sucEl = $('reset-success');
+  const btn   = $('reset-btn');
+  errEl.style.display = 'none'; errEl.classList.remove('visible');
+  sucEl.style.display = 'none'; sucEl.classList.remove('visible');
+
+  if (!code || code.length !== 6) { showResetErr('Enter the 6-digit code.'); return; }
+  if (pw1 !== pw2)               { showResetErr('Passwords do not match.'); return; }
+  const pwErr = pwComplexityError(pw1);
+  if (pwErr)                     { showResetErr(pwErr); return; }
+
+  function showResetErr(msg){
+    errEl.textContent = msg;
+    errEl.style.display = 'block'; errEl.classList.add('visible');
+  }
+
+  btn.disabled = true; btn.textContent = 'Verifying…';
+  try {
+    const rows = await sb('GET', `sp_users?email=eq.${encodeURIComponent(email)}&select=id,reset_code,reset_code_expires_at`);
+    const u = rows && rows[0];
+    if (!u || !u.reset_code) throw new Error('No reset code on file. Request a new one.');
+    if (new Date(u.reset_code_expires_at).getTime() < Date.now()) throw new Error('Reset code has expired. Request a new one.');
+    if (code !== u.reset_code) throw new Error('Incorrect reset code.');
+
+    const newHash = await sha256Hex(pw1);
+    await sb('PATCH', `sp_users?id=eq.${u.id}`,
+      { password_hash: newHash, reset_code: null, reset_code_expires_at: null }, 'return=minimal');
+
+    sucEl.textContent = 'Password reset successfully. You can now sign in.';
+    sucEl.style.display = 'block'; sucEl.classList.add('visible');
+    setTimeout(() => showLoginPanel('signin'), 2200);
+  } catch (e) {
+    showResetErr(e.message);
+  }
+  btn.disabled = false; btn.textContent = 'Reset Password';
 }
 
 function tryRestoreSession(){
@@ -1328,7 +1550,7 @@ function renderDashboard(){
   const f = getDashFilters();
   const rows = applyDashFilters(visibleOpps(), f);
 
-  // (KPI tile row was removed in v1 r21 — the waterfalls now carry the
+  // (KPI tile row was removed in v1 r22 — the waterfalls now carry the
   // headline metrics. drawWaterfall computes its own counts.)
 
   // Pies
@@ -1426,7 +1648,7 @@ function drawWaterfall(rows, mode, hostId, subId){
   }
 
   // SVG geometry — viewBox 1300, axis at y=320.
-  // New left-to-right order (v1 r21):
+  // New left-to-right order (v1 r22):
   //   1. Open / In Progress (below axis)
   //   2. Closed Won (above) + Replacements (below, seats only)
   //   3. Closed Lost — sits ON TOP of Net (true waterfall step-down)
@@ -2136,6 +2358,21 @@ async function bootApp(){
 }
 
 function bindEvents(){
+  // Password-reset panel switching
+  $('show-forgot-btn').addEventListener('click', () => {
+    $('forgot-email').value = $('login-email').value || '';
+    $('forgot-error').style.display = 'none';
+    $('forgot-success').style.display = 'none';
+    showLoginPanel('forgot');
+    setTimeout(() => $('forgot-email').focus(), 50);
+  });
+  $('back-to-signin1').addEventListener('click', () => showLoginPanel('signin'));
+  $('back-to-forgot').addEventListener('click',  () => showLoginPanel('forgot'));
+  $('forgot-btn').addEventListener('click', sendResetCode);
+  $('forgot-email').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendResetCode(); } });
+  $('reset-btn').addEventListener('click', submitPasswordReset);
+  $('reset-confirm-pw').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitPasswordReset(); } });
+
   // Login
   $('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
