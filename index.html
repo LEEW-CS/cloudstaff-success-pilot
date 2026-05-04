@@ -366,6 +366,17 @@ table.opps tr:hover td{ background:#fafbfd }
 .form-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:14px }
 @media (max-width:800px){ .form-grid{ grid-template-columns:1fr } }
 .form-grid .full{ grid-column:1/-1 }
+.form-section{
+  grid-column:1/-1; padding-top:16px; padding-bottom:8px;
+  border-bottom:1px solid var(--ink-200);
+  font-size:12px; font-weight:700; color:var(--ink-700);
+  text-transform:uppercase; letter-spacing:.08em;
+}
+.form-section:first-of-type{ padding-top:0 }
+.form-section-hint{
+  grid-column:1/-1; margin-top:-4px; margin-bottom:4px;
+  font-size:12px; color:var(--ink-500); font-style:italic; line-height:1.5;
+}
 .form-field{ display:flex; flex-direction:column; gap:5px }
 .form-field label{ font-size:12px; font-weight:600; color:var(--ink-700) }
 .form-field label .req{ color:var(--danger-500); margin-left:2px }
@@ -552,13 +563,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r26 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r27 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r26 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r27 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -661,7 +672,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r26</div>
+      <div class="rail-version">v1 r27</div>
     </div>
   </aside>
 
@@ -796,7 +807,7 @@ table.opps tr:hover td{ background:#fafbfd }
         </div>
       </div>
 
-      <!-- Insights row (v1 r26): Win Rate trend + Closed Lost Reasons -->
+      <!-- Insights row (v1 r27): Win Rate trend + Closed Lost Reasons -->
       <div class="charts-row-2">
         <div class="chart-card">
           <div class="chart-title">Win Rate Trend</div>
@@ -916,6 +927,9 @@ table.opps tr:hover td{ background:#fafbfd }
         <div class="card-body">
           <form id="opp-form" class="form-grid">
             <input type="hidden" id="f-id">
+
+            <!-- ─── Identification ─── -->
+            <div class="form-section">Identification</div>
             <div class="form-field">
               <label>Success Pilot<span class="req">*</span></label>
               <select id="f-sp" required></select>
@@ -944,6 +958,9 @@ table.opps tr:hover td{ background:#fafbfd }
               <label>Hubspot Link</label>
               <input type="url" id="f-hubspot" maxlength="500" placeholder="https://...">
             </div>
+
+            <!-- ─── Engagement ─── -->
+            <div class="form-section">Engagement</div>
             <div class="form-field">
               <label>Current Status<span class="req">*</span></label>
               <select id="f-status" required>
@@ -974,6 +991,21 @@ table.opps tr:hover td{ background:#fafbfd }
               <input type="number" id="f-repseats" min="0" step="1">
             </div>
             <div class="form-field">
+              <label>Consulting Engagement</label>
+              <select id="f-consulting">
+                <option value="">—</option>
+                <option>Free</option>
+                <option>Paid</option>
+              </select>
+            </div>
+
+            <!-- ─── Activity Log ─── -->
+            <div class="form-section">Activity Log</div>
+            <div class="form-section-hint">
+              Enter the count of times each activity occurred (e.g. <code>1</code> for one session). Leave blank or <code>0</code> if it didn&rsquo;t happen.
+              Any number greater than zero counts the row as &ldquo;activity logged&rdquo; on the dashboard&rsquo;s coverage chart.
+            </div>
+            <div class="form-field">
               <label>SME Customer Calls</label>
               <input type="number" id="f-sme" min="0" step="1">
             </div>
@@ -990,14 +1022,6 @@ table.opps tr:hover td{ background:#fafbfd }
               <input type="number" id="f-custcands" min="0" step="1">
             </div>
             <div class="form-field">
-              <label>Consulting Engagement</label>
-              <select id="f-consulting">
-                <option value="">—</option>
-                <option>Free</option>
-                <option>Paid</option>
-              </select>
-            </div>
-            <div class="form-field">
               <label>Set Client Team Metrics / KPIs</label>
               <input type="number" id="f-kpis" min="0" step="1">
             </div>
@@ -1005,6 +1029,9 @@ table.opps tr:hover td{ background:#fafbfd }
               <label>Client MyStaff Tutorial / Onboarding</label>
               <input type="number" id="f-mystaff" min="0" step="1">
             </div>
+
+            <!-- ─── Outcome ─── -->
+            <div class="form-section">Outcome &amp; Notes</div>
             <div class="form-field full">
               <label>Closed Lost Reasons</label>
               <select id="f-lost-reason">
@@ -1025,6 +1052,7 @@ table.opps tr:hover td{ background:#fafbfd }
               <label>COE Remarks</label>
               <textarea id="f-coe" maxlength="2000" placeholder="Optional notes"></textarea>
             </div>
+
             <div class="full btn-row">
               <button type="submit" class="btn btn-primary" id="opp-form-submit">
                 <svg class="i" viewBox="0 0 24 24"><use href="#i-check"/></svg>Save
@@ -1154,7 +1182,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r26";
+const APP_VERSION   = "v1 r27";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1353,7 +1381,7 @@ async function sendResetCode(){
   btn.disabled = false; btn.textContent = 'Send Reset Code';
 }
 
-// Renamed in v1 r26 — collided with the admin password-reset modal handler
+// Renamed in v1 r27 — collided with the admin password-reset modal handler
 // of the same name defined later in the file (last-declared-wins). The login
 // flow now uses submitLoginPasswordReset; the admin modal keeps the original.
 async function submitLoginPasswordReset(){
@@ -1585,7 +1613,7 @@ function renderDashboard(){
   const f = getDashFilters();
   const rows = applyDashFilters(visibleOpps(), f);
 
-  // (KPI tile row was removed in v1 r26 — the waterfalls now carry the
+  // (KPI tile row was removed in v1 r27 — the waterfalls now carry the
   // headline metrics. drawWaterfall computes its own counts.)
 
   // Pies
@@ -1635,7 +1663,7 @@ function renderDashboard(){
   drawWaterfall(rows, 'clients', 'wf-chart-clients', 'dash-wf-sub-clients');
   drawWaterfall(rows, 'seats',   'wf-chart-seats',   'dash-wf-sub-seats');
 
-  // Insights (v1 r26/r26)
+  // Insights (v1 r27/r26)
   drawWinRateTrend(rows, f);
   drawClosedLostReasons(rows);
   drawActivityCoverage(allOpps, f);
@@ -1933,7 +1961,7 @@ function drawWaterfall(rows, mode, hostId, subId){
   }
 
   // SVG geometry — viewBox 1300, axis at y=320.
-  // New left-to-right order (v1 r26):
+  // New left-to-right order (v1 r27):
   //   1. Open / In Progress (below axis)
   //   2. Closed Won (above) + Replacements (below, seats only)
   //   3. Closed Lost — sits ON TOP of Net (true waterfall step-down)
