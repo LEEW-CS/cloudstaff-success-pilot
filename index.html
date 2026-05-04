@@ -552,13 +552,13 @@ table.opps tr:hover td{ background:#fafbfd }
       <h1>Success Pilot Tracker</h1>
       <div class="login-meta">
         <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="login-pill" id="login-version-pill">v1 r22 Supabase</span>
+          <span class="login-pill" id="login-version-pill">v1 r23 Supabase</span>
           <span class="login-db" id="login-db-badge">
             <span class="login-db-dot" id="login-db-dot"></span>
             <span id="login-db-text">Connected to database</span>
           </span>
         </div>
-        <div class="login-build" id="login-build">v1 r22 modular · build 2026-05-01</div>
+        <div class="login-build" id="login-build">v1 r23 modular · build 2026-05-01</div>
       </div>
     </div>
 
@@ -661,7 +661,7 @@ table.opps tr:hover td{ background:#fafbfd }
       <div class="rail-signout" id="rail-signout" data-tip="Sign out" title="Sign out">
         <svg class="i" viewBox="0 0 24 24"><use href="#i-exit"/></svg>Sign out
       </div>
-      <div class="rail-version">v1 r22</div>
+      <div class="rail-version">v1 r23</div>
     </div>
   </aside>
 
@@ -1122,7 +1122,7 @@ table.opps tr:hover td{ background:#fafbfd }
    ======================================================== */
 const SUPABASE_URL  = "https://nvhoqsnpmylztqfienme.supabase.co";
 const SUPABASE_ANON = "sb_publishable_nzd8nj6q2rYaXLxXxxbdnA_lb6j1H4E";
-const APP_VERSION   = "v1 r22";
+const APP_VERSION   = "v1 r23";
 
 // Former Success Pilots — full names of people who used to be SPs but no
 // longer hold the role. Some still have historical data attributed to them
@@ -1321,7 +1321,10 @@ async function sendResetCode(){
   btn.disabled = false; btn.textContent = 'Send Reset Code';
 }
 
-async function submitPasswordReset(){
+// Renamed in v1 r23 — collided with the admin password-reset modal handler
+// of the same name defined later in the file (last-declared-wins). The login
+// flow now uses submitLoginPasswordReset; the admin modal keeps the original.
+async function submitLoginPasswordReset(){
   const email = $('forgot-email').value.trim().toLowerCase();
   const code  = $('reset-code').value.trim();
   const pw1   = $('reset-new-pw').value;
@@ -1550,7 +1553,7 @@ function renderDashboard(){
   const f = getDashFilters();
   const rows = applyDashFilters(visibleOpps(), f);
 
-  // (KPI tile row was removed in v1 r22 — the waterfalls now carry the
+  // (KPI tile row was removed in v1 r23 — the waterfalls now carry the
   // headline metrics. drawWaterfall computes its own counts.)
 
   // Pies
@@ -1648,7 +1651,7 @@ function drawWaterfall(rows, mode, hostId, subId){
   }
 
   // SVG geometry — viewBox 1300, axis at y=320.
-  // New left-to-right order (v1 r22):
+  // New left-to-right order (v1 r23):
   //   1. Open / In Progress (below axis)
   //   2. Closed Won (above) + Replacements (below, seats only)
   //   3. Closed Lost — sits ON TOP of Net (true waterfall step-down)
@@ -2370,8 +2373,8 @@ function bindEvents(){
   $('back-to-forgot').addEventListener('click',  () => showLoginPanel('forgot'));
   $('forgot-btn').addEventListener('click', sendResetCode);
   $('forgot-email').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendResetCode(); } });
-  $('reset-btn').addEventListener('click', submitPasswordReset);
-  $('reset-confirm-pw').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitPasswordReset(); } });
+  $('reset-btn').addEventListener('click', submitLoginPasswordReset);
+  $('reset-confirm-pw').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitLoginPasswordReset(); } });
 
   // Login
   $('login-form').addEventListener('submit', async (e) => {
